@@ -4,9 +4,9 @@ Eigenständiger Integrations- und Kontrollserver für **DJI FlightHub 2 On-Premi
 
 > M4-Cloud ist vollständig unabhängig von M3-Cloud. Proprietäre DJI-FlightHub-2-Komponenten werden nicht nachgebaut, kopiert oder redistribuiert. Das offiziell bereitgestellte/lizenzierte FH2-On-Premises-System bzw. DJI FH2 AIO bleibt der DJI-Upstream.
 
-## V1.0
+## V1.1.0
 
-M4-Cloud V1 stellt die vollständige eigene Integrations- und Betriebsschicht bereit:
+M4-Cloud V1.1 stellt die vollständige eigene Integrations- und Betriebsschicht bereit:
 
 - Docker-Compose-Deployment
 - Nginx Reverse Proxy
