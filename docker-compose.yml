@@ -17,20 +17,57 @@ services:
   mqtt:
     image: eclipse-mosquitto:2
     environment:
-      MQTT_USERNAME: ${MQTT_USERNAME:-m4-service}
-      MQTT_PASSWORD: ${MQTT_PASSWORD:-change-me-mqtt}
+      MQTT_SERVICE_USERNAME: ${MQTT_SERVICE_USERNAME:-m4-service}
+      MQTT_SERVICE_PASSWORD: ${MQTT_SERVICE_PASSWORD:-change-me-mqtt}
+      DJI_MQTT_USERNAME: ${DJI_MQTT_USERNAME:-dji-client}
+      DJI_MQTT_PASSWORD: ${DJI_MQTT_PASSWORD:-change-me-dji-mqtt}
     entrypoint:
       - /bin/sh
       - -ec
       - |
-        mosquitto_passwd -b -c /mosquitto/data/passwordfile "$$MQTT_USERNAME" "$$MQTT_PASSWORD"
+        rm -f /mosquitto/data/passwordfile /mosquitto/data/acl
+        mosquitto_passwd -b -c /mosquitto/data/passwordfile "$$MQTT_SERVICE_USERNAME" "$$MQTT_SERVICE_PASSWORD"
+        mosquitto_passwd -b /mosquitto/data/passwordfile "$$DJI_MQTT_USERNAME" "$$DJI_MQTT_PASSWORD"
+
+        {
+          echo "user $$MQTT_SERVICE_USERNAME"
+          echo "topic readwrite m4/#"
+          echo 'topic read $SYS/#'
+          echo "topic read sys/product/+/status"
+          echo "topic read thing/product/+/state"
+          echo "topic read thing/product/+/osd"
+          echo "topic read thing/product/+/requests"
+          echo "topic read thing/product/+/events"
+          echo "topic read thing/product/+/services_reply"
+          echo "topic read thing/product/+/property/set_reply"
+          echo "topic write thing/product/+/services"
+          echo "topic write thing/product/+/property/set"
+          echo
+          echo "user $$DJI_MQTT_USERNAME"
+          echo "topic write sys/product/+/status"
+          echo "topic write thing/product/+/state"
+          echo "topic write thing/product/+/osd"
+          echo "topic write thing/product/+/requests"
+          echo "topic write thing/product/+/events"
+          echo "topic write thing/product/+/services_reply"
+          echo "topic write thing/product/+/property/set_reply"
+          echo "topic read thing/product/+/services"
+          echo "topic read thing/product/+/property/set"
+        } > /mosquitto/data/acl
+
+        chmod 600 /mosquitto/data/passwordfile /mosquitto/data/acl
         exec mosquitto -c /mosquitto/config/mosquitto.conf
+    ports:
+      - "${MQTT_BIND:-0.0.0.0}:${MQTT_PUBLIC_PORT:-1883}:1883"
     volumes:
       - ./infra/mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
-      - ./infra/mosquitto/acl:/mosquitto/config/acl:ro
       - mqtt-data:/mosquitto/data
     healthcheck:
-      test: ["CMD-SHELL", "mosquitto_sub -h 127.0.0.1 -p 1883 -u $$MQTT_USERNAME -P $$MQTT_PASSWORD -t '$$SYS/broker/version' -C 1 -W 3 >/dev/null 2>&1"]
+      test:
+        [
+          "CMD-SHELL",
+          "mosquitto_sub -h 127.0.0.1 -p 1883 -u $$MQTT_SERVICE_USERNAME -P $$MQTT_SERVICE_PASSWORD -t '$$SYS/broker/version' -C 1 -W 3 >/dev/null 2>&1"
+        ]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -45,15 +82,27 @@ services:
       DATABASE_URL: ${DATABASE_URL:-postgresql://m4:change-me@postgres:5432/m4}
       MQTT_HOST: mqtt
       MQTT_PORT: "1883"
+      MQTT_PUBLIC_HOST: ${MQTT_PUBLIC_HOST:-127.0.0.1}
+      MQTT_PUBLIC_PORT: ${MQTT_PUBLIC_PORT:-1883}
+      MQTT_SERVICE_USERNAME: ${MQTT_SERVICE_USERNAME:-m4-service}
+      MQTT_SERVICE_PASSWORD: ${MQTT_SERVICE_PASSWORD:-change-me-mqtt}
+      DJI_MQTT_USERNAME: ${DJI_MQTT_USERNAME:-dji-client}
+      DJI_MQTT_PASSWORD: ${DJI_MQTT_PASSWORD:-change-me-dji-mqtt}
     depends_on:
       postgres:
         condition: service_healthy
       mqtt:
         condition: service_healthy
     ports:
-      - "${M4_PORT:-8080}:8080"
+      - "${M4_BIND:-0.0.0.0}:${M4_PORT:-8080}:8080"
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/health', timeout=2)"]
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/health', timeout=2)"
+        ]
       interval: 10s
       timeout: 3s
       retries: 10
