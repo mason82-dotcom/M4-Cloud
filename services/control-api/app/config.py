@@ -5,7 +5,7 @@ import socket
 from dataclasses import dataclass
 
 APP_NAME = "M4-Cloud Control API"
-APP_VERSION = "1.0.0"
+APP_VERSION = "1.1.0"
 
 
 def _as_bool(value: str) -> bool:
