@@ -67,6 +67,12 @@ case "$cmd" in
   verify)
     exec "$repo_root/scripts/verify-quadlet.sh"
     ;;
+  camera-status)
+    curl_json "$base_url/api/v1/cameras/status"
+    ;;
+  camera-paths)
+    curl_json "$base_url/api/v1/cameras/paths"
+    ;;
   fh2-status)
     curl_json "$base_url/api/v1/fh2/status"
     ;;
@@ -133,6 +139,10 @@ Monitoring:
 Autostart:
   scripts/m4-manager.sh enable
   scripts/m4-manager.sh disable
+
+DJI Kameraerkennung (read-only):
+  scripts/m4-manager.sh camera-status
+  scripts/m4-manager.sh camera-paths
 
 DJI FlightHub 2 OpenAPI V2 (read-only):
   scripts/m4-manager.sh fh2-status
