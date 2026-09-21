@@ -98,3 +98,15 @@ def test_ingest_event(monkeypatch) -> None:
 def test_list_events_limit_validation() -> None:
     response = client.get("/api/v1/events?limit=501")
     assert response.status_code == 400
+
+
+def test_websocket_ping() -> None:
+    with client.websocket_connect("/ws/events") as websocket:
+        websocket.send_text("ping")
+        assert websocket.receive_json() == {"type": "pong"}
+
+
+def test_metrics() -> None:
+    response = client.get("/metrics")
+    assert response.status_code == 200
+    assert "python_info" in response.text
