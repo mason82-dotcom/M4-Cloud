@@ -1,0 +1,21 @@
+services:
+  mqtt:
+    environment:
+      MQTT_TLS_ENABLED: "true"
+    ports:
+      - "${MQTT_TLS_BIND:-0.0.0.0}:${MQTT_TLS_PORT:-8883}:8883"
+    secrets:
+      - mqtt_tls_cert
+      - mqtt_tls_key
+
+  control-api:
+    environment:
+      MQTT_PUBLIC_HOST: ${MQTT_PUBLIC_HOST:?set MQTT_PUBLIC_HOST to the DNS name used by Pilot 2}
+      MQTT_PUBLIC_PORT: ${MQTT_TLS_PORT:-8883}
+      MQTT_PUBLIC_TLS: "true"
+
+secrets:
+  mqtt_tls_cert:
+    file: ${MQTT_TLS_CERT_FILE:-./secrets/mqtt-tls/server.crt}
+  mqtt_tls_key:
+    file: ${MQTT_TLS_KEY_FILE:-./secrets/mqtt-tls/server.key}
