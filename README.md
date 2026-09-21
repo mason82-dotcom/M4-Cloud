@@ -47,8 +47,13 @@ POSTGRES_PASSWORD=<sicheres-passwort>
 MQTT_SERVICE_PASSWORD=<sicheres-m4-mqtt-passwort>
 DJI_MQTT_PASSWORD=<sicheres-dji-mqtt-passwort>
 
-# IP/Hostname des M4-Hosts, den die RC Pro erreichen kann
-MQTT_PUBLIC_HOST=192.168.x.x
+# Sichere Defaults bleiben lokal:
+MQTT_BIND=127.0.0.1
+MQTT_PUBLIC_HOST=127.0.0.1
+
+# Erst für einen bewusst freigegebenen RC-Pro-Test:
+# MQTT_BIND=0.0.0.0
+# MQTT_PUBLIC_HOST=192.168.x.x
 ```
 
 Optional FH2 konfigurieren:
@@ -142,7 +147,7 @@ thing/product/+/drc/up
 thing/product/+/drc/down
 ```
 
-MQTT läuft in V2.0 ohne TLS und ist daher für das vertrauenswürdige Heim-/LAN-Netz vorgesehen. Für WAN-Zugriff muss TLS bzw. ein gesicherter Tunnel vorgeschaltet werden.
+MQTT läuft in V2.0 ohne TLS und bleibt deshalb standardmäßig auf Loopback gebunden. Für einen kontrollierten RC-Pro-LAN-Test muss die Freigabe explizit erfolgen. Für produktiven externen Zugriff ist ein TLS-Pfad oder ein entsprechend gesicherter Tunnel erforderlich.
 
 ## Raspberry Pi / ARM64
 

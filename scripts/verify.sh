@@ -51,6 +51,12 @@ echo
 curl --fail --silent "http://127.0.0.1:${M4_PORT:-8080}/api/v1/cameras/status"
 echo
 
+echo "Anonymen MQTT-Zugriff ablehnen..."
+if docker compose exec -T mqtt mosquitto_pub -h 127.0.0.1 -p 1883 -t m4/anonymous-test -m denied >/dev/null 2>&1; then
+  echo "Fehler: anonymer MQTT-Zugriff wurde akzeptiert." >&2
+  exit 1
+fi
+
 echo "MQTT-Rollen prüfen..."
 docker compose exec -T mqtt sh -ec '
   mosquitto_pub -h 127.0.0.1 -p 1883 \
