@@ -122,3 +122,19 @@ def test_fh2_waylines_use_size_parameter() -> None:
     result = asyncio.run(client.list_waylines(page=2, page_size=25))
 
     assert result == {"list": []}
+
+
+def test_dji_bootstrap_marks_tls_transport() -> None:
+    settings = Settings(
+        mqtt_public_host="m4.example",
+        mqtt_public_port=8883,
+        mqtt_public_tls=True,
+    )
+    adapter = DJICloudAPIAdapter(settings)
+
+    bootstrap = adapter.bootstrap_descriptor()
+
+    assert bootstrap["mqtt"]["host"] == "m4.example"
+    assert bootstrap["mqtt"]["port"] == 8883
+    assert bootstrap["mqtt"]["tls"] is True
+    assert bootstrap["mqtt"]["password_in_response"] is False
