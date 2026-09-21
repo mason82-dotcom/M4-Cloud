@@ -2,62 +2,76 @@
 
 Basis-URL über den Reverse Proxy: `http://<m4-host>:8080`
 
-## `GET /health`
+## System
 
-Liveness des Control-API-Prozesses.
+### `GET /health`
 
-## `GET /ready`
+Liveness der Control API.
 
-Prüft die eigene Laufzeitkette:
+### `GET /ready`
 
-- PostgreSQL
-- MQTT
-- frischen Heartbeat des Integration Workers
+Prüft PostgreSQL, MQTT und den Heartbeat des Integration Workers. HTTP 503
+bedeutet, dass mindestens eine eigene M4-Laufzeitabhängigkeit nicht bereit ist.
 
-HTTP 503 bedeutet, dass mindestens eine V1-Abhängigkeit noch nicht betriebsbereit ist.
+### `GET /api/v1/system/status`
 
-## `GET /api/v1/system/status`
-
-Nicht-sensitiver Systemstatus. Passwörter, API-Tokens und die konkrete
+Nicht-sensitiver Systemstatus. Passwörter, FH2-Token und konkrete
 FH2-Upstream-URL werden nicht ausgegeben.
 
-## `GET /api/v1/fh2/status`
+## DJI FlightHub 2 OpenAPI V2
 
-Prüft, ob der konfigurierte FH2-Upstream grundsätzlich erreichbar ist.
-Ohne Konfiguration wird `reason=not_configured` zurückgegeben. Ein HTTP-Status
-wie 401 kann trotzdem bedeuten, dass der Server netzseitig erreichbar ist.
+### `GET /api/v1/fh2/status`
 
-## `POST /api/v1/events`
+Prüft die V2-Konfiguration und – wenn URL, Token und Organisations-UUID
+vorhanden sind – über einen minimalen offiziellen Geräte-GET die OpenAPI.
 
-Neutraler HTTP-/Webhook-Eingang für Integrationsereignisse.
+### `GET /api/v1/fh2/devices`
 
-Beispiel:
+Parameter: `device_class=airport|drone|base_station`, `page`,
+`page_size`.
 
-```json
-{
-  "source": "fh2",
-  "topic": "mission/status",
-  "payload": {"state": "finished"}
-}
-```
+### `GET /api/v1/fh2/hms`
 
-## `GET /api/v1/events?limit=100`
+Mindestens ein `device_sn`. Ohne expliziten Zeitraum werden die letzten
+sieben Tage verwendet.
 
-Liefert die zuletzt persistierten Integrationsereignisse. Zulässiger Bereich:
-1 bis 500.
+### `GET /api/v1/fh2/waylines`
 
-## `WS /ws/events`
+Read-only Wayline-Liste des konfigurierten Projekts.
 
-M4-eigener WebSocket-Kanal. Befehle:
+### `GET /api/v1/fh2/flight-tasks`
+
+Read-only Task-Liste. Optional: `flight_task_status` und mehrfaches `sn`.
+
+Details und DJI-Upstream-Pfade: `docs/FH2-OPENAPI-V2.md`.
+
+## Ereignisse
+
+### `POST /api/v1/events`
+
+Neutraler HTTP-/Webhook-Eingang.
+
+### `GET /api/v1/events?limit=100`
+
+Letzte persistierte Integrationsereignisse, Limit 1–500.
+
+### `WS /ws/events`
+
+M4-WebSocket mit:
 
 - `ping` -> `pong`
 - `latest` -> letzte 50 Ereignisse
 
-## `GET /api/docs`
+## Entwickler
+
+### `GET /api/docs`
 
 Swagger UI.
 
-## Intern: `GET /metrics`
+### `GET /api/openapi.json`
 
-Prometheus-Metriken der Control API. Der optionale Prometheus-Container greift
-direkt im Compose-Netz darauf zu.
+OpenAPI-Schema.
+
+### `GET /metrics`
+
+Prometheus-Metriken; nicht im öffentlichen API-Schema gelistet.
