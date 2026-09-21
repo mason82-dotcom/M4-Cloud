@@ -11,13 +11,18 @@ services:
     depends_on:
       control-api:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O - http://127.0.0.1/health >/dev/null || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
     networks: [m4]
 
   control-api:
     build:
       context: ./services/control-api
     restart: unless-stopped
-    environment:
+    environment: &control-environment
       POSTGRES_HOST: postgres
       POSTGRES_PORT: "5432"
       POSTGRES_DB: "${POSTGRES_DB:-m4cloud}"
@@ -25,19 +30,34 @@ services:
       POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}"
       MQTT_HOST: "${MQTT_HOST:-mqtt}"
       MQTT_PORT: "${MQTT_PORT:-1883}"
+      DJI_MQTT_TOPICS: "${DJI_MQTT_TOPICS:-m4/fh2/#}"
       FH2_UPSTREAM_BASE_URL: "${FH2_UPSTREAM_BASE_URL:-}"
+      FH2_API_TOKEN: "${FH2_API_TOKEN:-}"
       FH2_UPSTREAM_VERIFY_TLS: "${FH2_UPSTREAM_VERIFY_TLS:-true}"
     depends_on:
       postgres:
         condition: service_healthy
       mqtt:
-        condition: service_started
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=2)"]
       interval: 10s
       timeout: 3s
       retries: 5
       start_period: 10s
+    networks: [m4]
+
+  integration-worker:
+    build:
+      context: ./services/control-api
+    restart: unless-stopped
+    command: ["python", "-m", "app.mqtt_worker"]
+    environment: *control-environment
+    depends_on:
+      postgres:
+        condition: service_healthy
+      mqtt:
+        condition: service_healthy
     networks: [m4]
 
   postgres:
@@ -49,6 +69,7 @@ services:
       POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}"
     volumes:
       - postgres-data:/var/lib/postgresql/data
+      - ./infra/postgres/init.sql:/docker-entrypoint-initdb.d/001-init.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-m4cloud} -d ${POSTGRES_DB:-m4cloud}"]
       interval: 10s
@@ -64,6 +85,29 @@ services:
     volumes:
       - ./infra/mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
       - mqtt-data:/mosquitto/data
+    healthcheck:
+      test: ["CMD-SHELL", "mosquitto_sub -h 127.0.0.1 -p 1883 -t '$$SYS/broker/version' -C 1 -W 3 >/dev/null 2>&1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+    networks: [m4]
+
+  prometheus:
+    image: prom/prometheus:v3.5.0
+    restart: unless-stopped
+    profiles: ["monitoring"]
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+    volumes:
+      - ./infra/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    ports:
+      - "127.0.0.1:${PROMETHEUS_PORT:-9090}:9090"
+    depends_on:
+      control-api:
+        condition: service_healthy
     networks: [m4]
 
 networks:
@@ -73,3 +117,4 @@ networks:
 volumes:
   postgres-data:
   mqtt-data:
+  prometheus-data:
