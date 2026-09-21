@@ -72,7 +72,7 @@ Empfohlen ist der Linux-Checkout:
 ```bash
 cd ~/src/M4-Cloud
 git fetch --all --prune
-git switch agent/podman-quadlet
+git switch main
 git pull --ff-only
 ```
 
