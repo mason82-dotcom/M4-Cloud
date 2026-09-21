@@ -7,6 +7,13 @@ from fastapi import FastAPI, HTTPException, Query, Response, WebSocket, WebSocke
 from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 
 from .config import APP_NAME, APP_VERSION, Settings
+from .cloud_api import (
+    DJICloudAPIClient,
+    DJICloudAPIConfigurationError,
+    DJICloudAPIConnectionError,
+    DJICloudAPIUpstreamError,
+    camera_path_to_dict,
+)
 from .db import (
     database_reachable,
     ensure_schema,
@@ -81,6 +88,10 @@ def system_status() -> dict[str, object]:
             "websocket": True,
             "event_persistence": True,
             "metrics": True,
+            "camera_discovery": {
+                "configured": settings.dji_cloud_api_configured,
+                "source": "dji-cloud-api-live-capacity",
+            },
         },
     }
 
@@ -181,6 +192,33 @@ async def fh2_flight_tasks(
     return {"data": data}
 
 
+@app.get("/api/v1/cameras/status")
+def camera_status() -> dict[str, object]:
+    settings = Settings.from_env()
+    return {
+        "configured": settings.dji_cloud_api_configured,
+        "source": "dji-cloud-api-live-capacity",
+        "endpoint": "/manage/api/v1/live/capacity",
+        "read_only": True,
+        "lyrebird": False,
+    }
+
+
+@app.get("/api/v1/cameras/paths")
+async def camera_paths() -> dict[str, object]:
+    settings = Settings.from_env()
+    try:
+        paths = await DJICloudAPIClient(settings).get_camera_paths()
+    except DJICloudAPIErrorTypes as exc:
+        raise _cloud_api_http_exception(exc) from exc
+
+    return {
+        "source": "dji-cloud-api-live-capacity",
+        "count": len(paths),
+        "paths": [camera_path_to_dict(path) for path in paths],
+    }
+
+
 @app.post("/api/v1/events", status_code=status.HTTP_202_ACCEPTED)
 def ingest_event(event: EventIn) -> dict[str, object]:
     event_id = store_event(
@@ -243,4 +281,34 @@ def _fh2_http_exception(exc: Exception) -> HTTPException:
     return HTTPException(
         status_code=status.HTTP_502_BAD_GATEWAY,
         detail={"error": "fh2_connection_error", "reason": str(exc)},
+    )
+
+
+DJICloudAPIErrorTypes = (
+    DJICloudAPIConfigurationError,
+    DJICloudAPIConnectionError,
+    DJICloudAPIUpstreamError,
+)
+
+
+def _cloud_api_http_exception(exc: Exception) -> HTTPException:
+    if isinstance(exc, DJICloudAPIConfigurationError):
+        return HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail={"error": "dji_cloud_api_not_configured", "reason": str(exc)},
+        )
+    if isinstance(exc, DJICloudAPIUpstreamError):
+        return HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail={
+                "error": "dji_cloud_api_upstream_error",
+                "upstream_status": exc.http_status,
+                "business_code": exc.business_code,
+                "request_id": exc.request_id,
+                "reason": str(exc),
+            },
+        )
+    return HTTPException(
+        status_code=status.HTTP_502_BAD_GATEWAY,
+        detail={"error": "dji_cloud_api_connection_error", "reason": str(exc)},
     )
