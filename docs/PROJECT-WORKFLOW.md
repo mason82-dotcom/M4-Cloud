@@ -30,12 +30,34 @@ Aufgaben:
 - Beiträge von RC Pro und Multispektral zusammenführen
 - Backend, API, Deployment, Manager-Skripte und Dokumentation konsistent halten
 - Änderungen gegen bestehende Funktionen regressionsprüfen
-- CI und lokale Verifikationspfade pflegen
+- lokale Verifikationspfade und Feature-Tests pflegen
 - neue Features direkt in `main` integrieren
 - Versionierung und Changelog fortschreiben
 - verhindern, dass parallele inkompatible Implementierungen entstehen
 
 Der Manager entscheidet damit über den finalen technischen Stand von M4-Cloud.
+
+### Direktor
+
+Der Direktor ist alleiniger Owner der CI.
+
+Aufgaben:
+
+- CI-Läufe gezielt manuell starten
+- CI-Ergebnisse bewerten
+- Release-/Integrationsstatus auf Basis der CI freigeben
+- bei Bedarf die Validierungsstrategie anpassen
+
+Für GitHub Actions gilt:
+
+```text
+workflow_dispatch
+```
+
+Es gibt keine automatische CI auf Push oder Pull Request. Manager, RC Pro und
+Multispektral starten und bewerten keine CI-Läufe. Sie liefern lokalen
+Feature-Testcode und Verifikationsschritte; die zentrale CI-Abnahme gehört
+ausschließlich dem Direktor.
 
 ### RC Pro
 
@@ -103,7 +125,8 @@ Beispiel:
    weiterverarbeitet werden.
 3. Manager implementiert den stabilen M4-API-/Backend-/Deployment-Pfad.
 4. Tests und Dokumentation werden gemeinsam gegen die reale Nutzung geprüft.
-5. Der geprüfte Stand liegt in `main`.
+5. Der Stand liegt in `main`.
+6. Nur der Direktor startet und bewertet bei Bedarf die zentrale CI-Abnahme.
 
 ## Regeln für main
 
