@@ -44,7 +44,7 @@ echo "FH2-Status:"
 curl --fail --silent "$base_url/api/v1/fh2/status"
 echo
 
-echo "FH2-V2-Routen:"
+echo "API-Routen:"
 openapi_json="$(curl --fail --silent "$base_url/api/openapi.json")"
 for route in \
   "/api/v1/fh2/devices" \
@@ -52,10 +52,11 @@ for route in \
   "/api/v1/fh2/waylines" \
   "/api/v1/fh2/flight-tasks" \
   "/api/v1/cameras/status" \
-  "/api/v1/cameras/paths"
+  "/api/v1/cameras/paths" \
+  "/api/v1/cameras/telemetry"
 do
   if ! grep -Fq "$route" <<<"$openapi_json"; then
-    echo "FH2-V2-Route fehlt im OpenAPI-Schema: $route" >&2
+    echo "API-Route fehlt im OpenAPI-Schema: $route" >&2
     exit 1
   fi
   echo "  $route: OK"
