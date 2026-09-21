@@ -1,6 +1,0 @@
-[Unit]
-Description=M4-Cloud Podman network
-
-[Network]
-NetworkName=m4-cloud
-Driver=bridge

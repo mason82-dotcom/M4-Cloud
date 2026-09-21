@@ -1,7 +1,0 @@
-[Unit]
-Description=M4-Cloud rootless Podman stack
-Requires=reverse-proxy.service integration-worker.service
-After=reverse-proxy.service integration-worker.service
-
-[Install]
-WantedBy=default.target

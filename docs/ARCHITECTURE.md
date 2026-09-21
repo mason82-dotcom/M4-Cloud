@@ -1,50 +1,28 @@
 # Architektur
 
-## Systemgrenze
+## Zielbild
 
-M4-Cloud ist der eigene Integrations- und Kontroll-Layer. DJI FlightHub 2
-On-Premises bleibt ein externer, offiziell bezogener Upstream.
+M4-Cloud besitzt ein eigenes Domainmodell. Externe DJI-Schnittstellen dürfen dieses Modell nicht bestimmen.
 
 ```text
-DJI Pilot 2 / DJI Dock / FH2 On-Premises
-                  |
-        offizielle Schnittstellen
-      MQTT / HTTPS / WebSocket / OpenAPI
-                  |
-             [M4-Cloud]
-                  |
-       +----------+----------+
-       |                     |
-  Reverse Proxy          MQTT Broker
-       |
-   Control API
-       |
-   PostgreSQL
+FlightHub 2 ─ OpenAPI V2 Adapter ─┐
+                                 ├─ M4 Domainmodell ─ Control API
+RC Pro/Aircraft ─ Cloud API Adapter┘                 ├─ PostgreSQL
+                                                     └─ MQTT
 ```
 
-## Eigene Komponenten
+## Regeln
 
-- **Reverse Proxy:** zentraler HTTP-Einstieg und WebSocket-Passthrough.
-- **Control API:** Liveness, Readiness, Systemstatus und spätere Adapter.
-- **PostgreSQL:** ausschließlich M4-eigene Zustände und Konfigurationen.
-- **MQTT:** Integrationspunkt für offiziell unterstützte DJI-Cloud-API-Flows.
+1. FH2 OpenAPI V2 und DJI Cloud API sind getrennte Integrationspfade.
+2. MSDK V5 kann als dritter Adapter angebunden werden.
+3. Kamera-/Gimbal-/Gerätezustände werden auf kanonische M4-Modelle normalisiert.
+4. Keine DJI-spezifischen Pfade im Frontend.
+5. Keine direkte Kopplung an M3-Cloud.
+6. Lyrebird ist deaktiviert.
+7. DRC und aktive Flugsteuerung werden erst nach separater Freigabe aktiviert.
 
-## Nicht Bestandteil des Repositories
+## Basisdienste
 
-- DJI FlightHub 2 On-Premises Binärdateien, Container oder Installationspakete
-- DJI-interne Services
-- Lizenzdateien
-- proprietäre Implementierungen aus Reverse Engineering
-
-## Integrationsprinzip
-
-Adapter werden ausschließlich gegen dokumentierte oder offiziell freigegebene
-Schnittstellen gebaut. Der FH2-Upstream wird über Konfiguration referenziert.
-M4-Cloud muss ohne erreichbaren FH2-Upstream startfähig und diagnostizierbar
-bleiben.
-
-## V1-Verantwortungsgrenze
-
-V1 stellt den lokalen Kontrollserver-Rahmen bereit. Eine konkrete DJI-Instanz
-wird erst über deren offiziell bereitgestellte Parameter, Zertifikate und
-Zugangsdaten angebunden. Diese Daten gehören nicht ins Repository.
+- `control-api`: FastAPI, Adaptergrenzen und Domainmodell.
+- `mqtt`: interner Mosquitto-Broker, authentifiziert und ACL-beschränkt.
+- `postgres`: Persistenz; fachliches Schema folgt erst mit stabilen Domänenobjekten.

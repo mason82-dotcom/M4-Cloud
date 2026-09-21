@@ -1,128 +1,64 @@
-name: m4-cloud
-
 services:
-  reverse-proxy:
-    image: nginx:1.27-alpine
-    restart: unless-stopped
-    ports:
-      - "${M4_HTTP_BIND:-0.0.0.0}:${M4_HTTP_PORT:-8080}:80"
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-m4}
+      POSTGRES_USER: ${POSTGRES_USER:-m4}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-me}
     volumes:
-      - ./infra/nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
-    depends_on:
-      control-api:
-        condition: service_healthy
+      - postgres-data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "wget -q -O - http://127.0.0.1/health >/dev/null || exit 1"]
-      interval: 10s
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-m4} -d ${POSTGRES_DB:-m4}"]
+      interval: 5s
       timeout: 3s
-      retries: 5
-    networks: [m4]
+      retries: 20
+    restart: unless-stopped
+
+  mqtt:
+    image: eclipse-mosquitto:2
+    environment:
+      MQTT_USERNAME: ${MQTT_USERNAME:-m4-service}
+      MQTT_PASSWORD: ${MQTT_PASSWORD:-change-me-mqtt}
+    entrypoint:
+      - /bin/sh
+      - -ec
+      - |
+        mosquitto_passwd -b -c /mosquitto/data/passwordfile "$$MQTT_USERNAME" "$$MQTT_PASSWORD"
+        exec mosquitto -c /mosquitto/config/mosquitto.conf
+    volumes:
+      - ./infra/mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+      - ./infra/mosquitto/acl:/mosquitto/config/acl:ro
+      - mqtt-data:/mosquitto/data
+    healthcheck:
+      test: ["CMD-SHELL", "mosquitto_sub -h 127.0.0.1 -p 1883 -u $$MQTT_USERNAME -P $$MQTT_PASSWORD -t '$$SYS/broker/version' -C 1 -W 3 >/dev/null 2>&1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
 
   control-api:
     build:
       context: ./services/control-api
-    restart: unless-stopped
-    environment: &control-environment
-      POSTGRES_HOST: postgres
-      POSTGRES_PORT: "5432"
-      POSTGRES_DB: "${POSTGRES_DB:-m4cloud}"
-      POSTGRES_USER: "${POSTGRES_USER:-m4cloud}"
-      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}"
-      MQTT_HOST: "${MQTT_HOST:-mqtt}"
-      MQTT_PORT: "${MQTT_PORT:-1883}"
-      DJI_MQTT_TOPICS: "${DJI_MQTT_TOPICS:-m4/fh2/#}"
-      FH2_UPSTREAM_BASE_URL: "${FH2_UPSTREAM_BASE_URL:-}"
-      FH2_USER_TOKEN: "${FH2_USER_TOKEN:-${FH2_API_TOKEN:-}}"
-      FH2_ORG_UUID: "${FH2_ORG_UUID:-}"
-      FH2_PROJECT_UUID: "${FH2_PROJECT_UUID:-}"
-      FH2_LANGUAGE: "${FH2_LANGUAGE:-zh}"
-      FH2_UPSTREAM_VERIFY_TLS: "${FH2_UPSTREAM_VERIFY_TLS:-true}"
-      FH2_TIMEOUT_SECONDS: "${FH2_TIMEOUT_SECONDS:-15}"
-      DJI_CLOUD_API_BASE_URL: "${DJI_CLOUD_API_BASE_URL:-}"
-      DJI_CLOUD_API_TOKEN: "${DJI_CLOUD_API_TOKEN:-}"
-      DJI_CLOUD_API_VERIFY_TLS: "${DJI_CLOUD_API_VERIFY_TLS:-true}"
-      DJI_CLOUD_API_TIMEOUT_SECONDS: "${DJI_CLOUD_API_TIMEOUT_SECONDS:-15}"
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgresql://m4:change-me@postgres:5432/m4}
+      MQTT_HOST: mqtt
+      MQTT_PORT: "1883"
     depends_on:
       postgres:
         condition: service_healthy
       mqtt:
         condition: service_healthy
+    ports:
+      - "${M4_PORT:-8080}:8080"
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=2)"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/health', timeout=2)"]
       interval: 10s
       timeout: 3s
-      retries: 5
-      start_period: 10s
-    networks: [m4]
-
-  integration-worker:
-    build:
-      context: ./services/control-api
+      retries: 10
     restart: unless-stopped
-    command: ["python", "-m", "app.mqtt_worker"]
-    environment: *control-environment
-    depends_on:
-      postgres:
-        condition: service_healthy
-      mqtt:
-        condition: service_healthy
-    networks: [m4]
-
-  postgres:
-    image: postgres:17-alpine
-    restart: unless-stopped
-    environment:
-      POSTGRES_DB: "${POSTGRES_DB:-m4cloud}"
-      POSTGRES_USER: "${POSTGRES_USER:-m4cloud}"
-      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}"
-    volumes:
-      - postgres-data:/var/lib/postgresql/data
-      - ./infra/postgres/init.sql:/docker-entrypoint-initdb.d/001-init.sql:ro
-    healthcheck:
-      test: ["CMD-SHELL", "PGPASSWORD=\"${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}\" psql -h 127.0.0.1 -U \"${POSTGRES_USER:-m4cloud}\" -d \"${POSTGRES_DB:-m4cloud}\" -tAc 'SELECT 1' | grep -q 1"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    networks: [m4]
-
-  mqtt:
-    image: eclipse-mosquitto:2
-    restart: unless-stopped
-    ports:
-      - "${M4_MQTT_BIND:-127.0.0.1}:${M4_MQTT_PORT:-1883}:1883"
-    volumes:
-      - ./infra/mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
-      - mqtt-data:/mosquitto/data
-    healthcheck:
-      test: ["CMD-SHELL", "mosquitto_pub -h 127.0.0.1 -p 1883 -t m4/health -m ping >/dev/null 2>&1"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 5s
-    networks: [m4]
-
-  prometheus:
-    image: prom/prometheus:v3.5.0
-    restart: unless-stopped
-    profiles: ["monitoring"]
-    command:
-      - --config.file=/etc/prometheus/prometheus.yml
-      - --storage.tsdb.path=/prometheus
-    volumes:
-      - ./infra/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
-      - prometheus-data:/prometheus
-    ports:
-      - "127.0.0.1:${PROMETHEUS_PORT:-9090}:9090"
-    depends_on:
-      control-api:
-        condition: service_healthy
-    networks: [m4]
-
-networks:
-  m4:
-    driver: bridge
 
 volumes:
   postgres-data:
   mqtt-data:
-  prometheus-data:

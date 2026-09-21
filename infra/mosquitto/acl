@@ -1,0 +1,3 @@
+user m4-service
+topic readwrite m4/#
+topic read $SYS/#

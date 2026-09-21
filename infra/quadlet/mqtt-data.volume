@@ -1,7 +1,0 @@
-[Unit]
-Description=M4-Cloud MQTT data
-
-[Volume]
-VolumeName=m4-cloud-mqtt-data
-Label=app=m4-cloud
-Label=service=mqtt
