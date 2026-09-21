@@ -49,3 +49,23 @@ def test_invalid_fh2_language_falls_back_to_zh(monkeypatch) -> None:
     settings = Settings.from_env()
 
     assert settings.fh2_language == "zh"
+
+
+def test_direct_cloud_ingress_is_opt_in(monkeypatch) -> None:
+    monkeypatch.setenv("DJI_MQTT_TOPICS", "m4/fh2/#")
+    monkeypatch.delenv("DJI_CLOUD_API_ENABLED", raising=False)
+    settings = Settings.from_env()
+    assert settings.dji_cloud_api_enabled is False
+    assert settings.mqtt_subscriptions == ("m4/fh2/#",)
+
+
+def test_direct_cloud_ingress_topics_and_worker_credentials(monkeypatch) -> None:
+    monkeypatch.setenv("DJI_CLOUD_API_ENABLED", "true")
+    monkeypatch.setenv("MQTT_WORKER_USERNAME", "worker-test")
+    monkeypatch.setenv("MQTT_WORKER_PASSWORD", "worker-secret")
+    settings = Settings.from_env()
+    assert settings.mqtt_username == "worker-test"
+    assert settings.mqtt_password == "worker-secret"
+    assert "thing/product/+/osd" in settings.mqtt_subscriptions
+    assert "sys/product/+/status" in settings.mqtt_subscriptions
+    assert "thing/product/+/drc/up" not in settings.mqtt_subscriptions

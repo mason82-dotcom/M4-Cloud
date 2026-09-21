@@ -9,6 +9,7 @@ import paho.mqtt.client as mqtt
 
 from .config import Settings
 from .db import ensure_schema, store_event, touch_heartbeat
+from .dji_cloud import source_for_topic
 
 STOP = threading.Event()
 
@@ -31,7 +32,7 @@ def on_connect(
     settings = Settings.from_env()
     if reason_code != 0:
         return
-    for topic in settings.dji_mqtt_topics:
+    for topic in settings.mqtt_subscriptions:
         client.subscribe(topic, qos=1)
 
 
@@ -41,7 +42,7 @@ def on_message(
     message: mqtt.MQTTMessage,
 ) -> None:
     store_event(
-        source="mqtt",
+        source=source_for_topic(message.topic),
         topic=message.topic,
         payload=decode_payload(message.payload),
     )
@@ -59,6 +60,8 @@ def main() -> None:
         mqtt.CallbackAPIVersion.VERSION2,
         client_id="m4-integration-worker",
     )
+    if settings.mqtt_username:
+        client.username_pw_set(settings.mqtt_username, settings.mqtt_password)
     client.on_connect = on_connect
     client.on_message = on_message
 
