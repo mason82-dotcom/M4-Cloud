@@ -24,6 +24,10 @@ def make_settings(**overrides):
         "fh2_language": "zh",
         "fh2_upstream_verify_tls": True,
         "fh2_timeout_seconds": 5.0,
+        "dji_cloud_api_base_url": "",
+        "dji_cloud_api_token": "",
+        "dji_cloud_api_verify_tls": True,
+        "dji_cloud_api_timeout_seconds": 5.0,
     }
     values.update(overrides)
     return Settings(**values)
