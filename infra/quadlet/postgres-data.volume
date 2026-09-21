@@ -1,0 +1,7 @@
+[Unit]
+Description=M4-Cloud PostgreSQL data
+
+[Volume]
+VolumeName=m4-cloud-postgres-data
+Label=app=m4-cloud
+Label=service=postgres

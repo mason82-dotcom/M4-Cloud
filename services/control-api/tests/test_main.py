@@ -13,7 +13,7 @@ def test_health() -> None:
     assert response.json() == {
         "status": "ok",
         "service": "control-api",
-        "version": "1.0.0",
+        "version": "1.1.0",
     }
 
 
@@ -78,8 +78,14 @@ def test_fh2_status_when_not_configured(monkeypatch) -> None:
     assert response.status_code == 200
     assert response.json() == {
         "configured": False,
+        "profile": "privatization-openapi-v2",
+        "organization_configured": False,
+        "project_configured": False,
         "reachable": False,
-        "reason": "not_configured",
+        "authenticated": False,
+        "http_status": None,
+        "business_code": None,
+        "reason": "base_url_missing",
     }
 
 
@@ -110,3 +116,43 @@ def test_metrics() -> None:
     response = client.get("/metrics")
     assert response.status_code == 200
     assert "python_info" in response.text
+
+
+def test_fh2_devices_route_is_read_only_proxy(monkeypatch) -> None:
+    monkeypatch.setenv("FH2_UPSTREAM_BASE_URL", "https://fh2.example.local")
+    monkeypatch.setenv("FH2_USER_TOKEN", "secret-token")
+    monkeypatch.setenv("FH2_ORG_UUID", "org-123")
+
+    async def fake_list_devices(self, *, device_class, page, page_size):
+        assert device_class == "drone"
+        assert page == 2
+        assert page_size == 10
+        return {"list": [{"device_sn": "ABC123"}], "total": 1}
+
+    monkeypatch.setattr(main.FH2Client, "list_devices", fake_list_devices)
+
+    response = client.get("/api/v1/fh2/devices?device_class=drone&page=2&page_size=10")
+
+    assert response.status_code == 200
+    assert response.json()["data"]["list"][0]["device_sn"] == "ABC123"
+    assert "secret-token" not in response.text
+
+
+def test_fh2_hms_rejects_invalid_window(monkeypatch) -> None:
+    response = client.get(
+        "/api/v1/fh2/hms?device_sn=ABC123&begin_time_ms=200&end_time_ms=100"
+    )
+
+    assert response.status_code == 400
+
+
+def test_fh2_waylines_configuration_error_is_503(monkeypatch) -> None:
+    monkeypatch.delenv("FH2_PROJECT_UUID", raising=False)
+    monkeypatch.setenv("FH2_UPSTREAM_BASE_URL", "https://fh2.example.local")
+    monkeypatch.setenv("FH2_USER_TOKEN", "secret-token")
+
+    response = client.get("/api/v1/fh2/waylines")
+
+    assert response.status_code == 503
+    assert response.json()["detail"]["error"] == "fh2_not_configured"
+    assert "secret-token" not in response.text

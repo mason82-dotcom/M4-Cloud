@@ -1,0 +1,10 @@
+{
+  "recommendations": [
+    "ms-vscode-remote.remote-wsl",
+    "ms-python.python",
+    "redhat.vscode-yaml",
+    "github.vscode-pull-request-github",
+    "willibrandon.systemd",
+    "onlyati.quadlet-lsp"
+  ]
+}

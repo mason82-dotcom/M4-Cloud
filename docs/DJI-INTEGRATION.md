@@ -3,56 +3,93 @@
 ## Zweck
 
 M4-Cloud ergänzt eine offiziell bereitgestellte DJI FlightHub 2
-On-Premises-Installation. Das Repository enthält **keine** FlightHub-2-
-Serverbinärdateien und versucht nicht, DJI-interne Dienste nachzubilden.
+On-Premises-/Privatization-Installation. Das Repository enthält keine
+proprietären FlightHub-2-Serverbinärdateien und bildet keine DJI-internen
+Dienste nach.
 
-## Unterstützte Integrationswege
+## FH2 OpenAPI V2
 
-Die Architektur bereitet die von DJI öffentlich beschriebenen
-Integrationsklassen vor:
+Die erste produktive FH2-HTTP-Integration orientiert sich an DJIs offiziellem
+Repository `dji-sdk/FlightHub-2-OpenAPI-V2-Demo`.
 
-- HTTPS / REST / FlightHub OpenAPI
-- MQTT
-- WebSocket
-- FlightHub Sync / dateibasierte Übergaben
-- Livestream-Weiterleitung bleibt Aufgabe der offiziellen FH2-/Sync-
-  Konfiguration; M4 terminiert in V1 keinen proprietären DJI-Videostream.
-
-## FH2 OpenAPI
-
-Setzen:
+Konfiguration:
 
 ```env
 FH2_UPSTREAM_BASE_URL=https://fh2.example.local
-FH2_API_TOKEN=...
+FH2_USER_TOKEN=...
+FH2_ORG_UUID=...
+FH2_PROJECT_UUID=...
+FH2_LANGUAGE=zh
 FH2_UPSTREAM_VERIFY_TLS=true
+FH2_TIMEOUT_SECONDS=15
 ```
 
-`GET /api/v1/fh2/status` prüft die grundsätzliche Erreichbarkeit, ohne die
-URL oder den Token in der API-Antwort preiszugeben.
+Authentifizierung:
 
-V1 nimmt absichtlich **keine undokumentierten OpenAPI-Pfade** an. Sobald für
-die eingesetzte FH2-Version die offizielle OpenAPI-Definition vorliegt, werden
-deren konkreten Ressourcen im Adapter ergänzt. Damit vermeiden wir falsche oder
-versionsabhängige DJI-Endpunkte.
+- `X-User-Token`
+- `X-Request-Id`
+- `X-Language`
+- projektbezogen zusätzlich `X-Project-Uuid`
+
+Der frühere M4-V1.0-Name `FH2_API_TOKEN` wird nur noch als
+Migrations-Fallback gelesen. Neue Installationen verwenden
+`FH2_USER_TOKEN`.
+
+## Read-only Ressourcen
+
+M4 implementiert derzeit ausschließlich dokumentierte GET-Operationen:
+
+- Geräte
+- HMS
+- Waylines
+- Flight Tasks
+
+M4-Control-API:
+
+```text
+GET /api/v1/fh2/status
+GET /api/v1/fh2/devices
+GET /api/v1/fh2/hms
+GET /api/v1/fh2/waylines
+GET /api/v1/fh2/flight-tasks
+```
+
+Ausführlich: `docs/FH2-OPENAPI-V2.md`.
+
+## Fehlerbehandlung
+
+DJI kann fachliche Fehler mit HTTP 200 und `code != 0` zurückgeben. M4
+behandelt solche Antworten als Upstream-Fehler und nicht als Erfolg.
+
+Secrets und die konkrete FH2-Upstream-URL werden nicht in Statusantworten
+ausgegeben.
+
+## Sicherheitsgrenze
+
+In dieser Phase existieren keine M4-Endpunkte zum:
+
+- Starten oder Erstellen von Flugaufgaben
+- Steuern von Luftfahrzeugen
+- RTH
+- Payload Control
+- Löschen von DJI-Daten
+- Starten kosten-/quota-relevanter Rekonstruktionen
+
+Spätere Operationen werden in `READ`, `WRITE` und `DANGEROUS` getrennt.
 
 ## MQTT
 
 Der Worker abonniert die in `DJI_MQTT_TOPICS` konfigurierten Topics und
-persistiert empfangene Ereignisse. Standard ist ausschließlich
-`m4/fh2/#`; die tatsächlichen DJI-Topics werden erst entsprechend der
-offiziellen Cloud-API-/FH2-Konfiguration eingetragen.
+persistiert empfangene Ereignisse. Standard bleibt `m4/fh2/#`; reale
+DJI-Topics werden erst gemäß der eingesetzten FH2-/Cloud-API-Konfiguration
+eingetragen.
 
 ## HTTP-Events
 
-`POST /api/v1/events` ist ein neutraler Webhook-Eingang für offiziell
+`POST /api/v1/events` ist ein neutraler M4-Webhook-Eingang für offiziell
 konfigurierte FH2-/Sync-Ereignisse oder eigene Adapter.
 
 ## WebSocket
 
-`/ws/events` bietet einen M4-eigenen Live-Kanal. Unterstützte Befehle:
-
-- `ping`
-- `latest`
-
-Der Kanal ist keine Nachbildung eines internen DJI-WebSockets.
+`/ws/events` ist ein M4-eigener Live-Kanal mit `ping` und `latest`.
+Er ist keine Nachbildung eines internen DJI-WebSockets.
