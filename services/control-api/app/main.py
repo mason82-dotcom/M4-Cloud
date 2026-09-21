@@ -1,9 +1,10 @@
 from __future__ import annotations
 
+import hmac
 import time
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, HTTPException, Query, Response, WebSocket, WebSocketDisconnect, status
+from fastapi import FastAPI, Header, HTTPException, Query, Response, WebSocket, WebSocketDisconnect, status
 from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 
 from .config import APP_NAME, APP_VERSION, Settings
@@ -83,6 +84,10 @@ def system_status() -> dict[str, object]:
             "project_configured": bool(settings.fh2_project_uuid),
             "verify_tls": settings.fh2_upstream_verify_tls,
         },
+        "dji_cloud_ingress": {
+            "enabled": settings.dji_cloud_api_enabled,
+            "bootstrap_ready": settings.dji_bootstrap_ready,
+        },
         "integration": {
             "mqtt": {"host": settings.mqtt_host, "port": settings.mqtt_port},
             "https": True,
@@ -93,6 +98,71 @@ def system_status() -> dict[str, object]:
                 "configured": settings.dji_cloud_api_configured,
                 "source": "dji-cloud-api-live-capacity",
             },
+        },
+    }
+
+
+@app.get("/api/v1/dji/cloud/status")
+def dji_cloud_status() -> dict[str, object]:
+    settings = Settings.from_env()
+    return {
+        "enabled": settings.dji_cloud_api_enabled,
+        "mqtt_reachable": settings.mqtt_reachable() if settings.dji_cloud_api_enabled else False,
+        "bootstrap_ready": settings.dji_bootstrap_ready,
+        "subscriptions": list(settings.dji_cloud_api_topics) if settings.dji_cloud_api_enabled else [],
+        "capabilities": {
+            "mqtt_ingest": settings.dji_cloud_api_enabled,
+            "mqtt_authentication": True,
+            "mqtt_acl": True,
+            "pilot2_webview_bootstrap": settings.dji_bootstrap_ready,
+            "camera_live_capacity_read_only": settings.dji_cloud_api_configured,
+            "device_commands": False,
+            "drc": False,
+        },
+    }
+
+
+@app.get("/api/v1/dji/cloud/bootstrap")
+def dji_cloud_bootstrap(
+    x_m4_bootstrap_token: str | None = Header(default=None, alias="X-M4-Bootstrap-Token"),
+) -> dict[str, object]:
+    settings = Settings.from_env()
+    if not settings.dji_cloud_api_enabled:
+        raise HTTPException(status_code=503, detail="dji_cloud_api_disabled")
+    if not settings.dji_bootstrap_ready:
+        raise HTTPException(status_code=503, detail="dji_cloud_bootstrap_incomplete")
+    if not x_m4_bootstrap_token or not hmac.compare_digest(
+        x_m4_bootstrap_token, settings.dji_bootstrap_token
+    ):
+        raise HTTPException(status_code=401, detail="invalid_bootstrap_token")
+
+    return {
+        "platform": {"name": settings.dji_platform_name},
+        "workspace": {
+            "id": settings.dji_workspace_id,
+            "name": settings.dji_workspace_name,
+            "description": settings.dji_workspace_description,
+        },
+        "license": {
+            "app_id": settings.dji_app_id,
+            "app_key": settings.dji_app_key,
+            "license": settings.dji_app_license,
+        },
+        "api": {"host": settings.dji_api_host, "token": settings.dji_api_token},
+        "websocket": {"host": settings.dji_ws_host, "token": settings.dji_ws_token},
+        "mqtt": {
+            "host": settings.dji_mqtt_external_host,
+            "username": settings.dji_mqtt_username,
+            "password": settings.dji_mqtt_password,
+        },
+        "features": {
+            "map": True,
+            "tsa": True,
+            "media": False,
+            "mission": False,
+            "camera_live_capacity_read_only": settings.dji_cloud_api_configured,
+            "device_commands": False,
+            "drc": False,
         },
     }
 
