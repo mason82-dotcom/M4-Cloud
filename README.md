@@ -43,7 +43,6 @@ Danach mindestens ändern:
 
 ```env
 POSTGRES_PASSWORD=<sicheres-passwort>
-DATABASE_URL=postgresql://m4:<sicheres-passwort>@postgres:5432/m4
 
 MQTT_SERVICE_PASSWORD=<sicheres-m4-mqtt-passwort>
 DJI_MQTT_PASSWORD=<sicheres-dji-mqtt-passwort>
@@ -142,6 +141,8 @@ Nicht freigegeben:
 thing/product/+/drc/up
 thing/product/+/drc/down
 ```
+
+MQTT läuft in V2.0 ohne TLS und ist daher für das vertrauenswürdige Heim-/LAN-Netz vorgesehen. Für WAN-Zugriff muss TLS bzw. ein gesicherter Tunnel vorgeschaltet werden.
 
 ## Raspberry Pi / ARM64
 
