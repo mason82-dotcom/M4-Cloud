@@ -18,6 +18,31 @@ bedeutet, dass mindestens eine eigene M4-Laufzeitabhängigkeit nicht bereit ist.
 Nicht-sensitiver Systemstatus. Passwörter, FH2-Token und konkrete
 FH2-Upstream-URL werden nicht ausgegeben.
 
+## DJI Cloud API Ingress
+
+### `GET /api/v1/dji/cloud/status`
+
+Nicht-sensitiver Status mit Aktivierung, MQTT-Erreichbarkeit,
+Bootstrap-Bereitschaft, DJI-Uplink-Subscriptions und Capability-Flags.
+
+### `GET /api/v1/dji/cloud/bootstrap`
+
+M4-eigener Pilot-2-Bootstrap.
+
+```text
+X-M4-Bootstrap-Token: <DJI_BOOTSTRAP_TOKEN>
+```
+
+Mögliche Antworten:
+
+- `401 invalid_bootstrap_token`
+- `503 dji_cloud_api_disabled`
+- `503 dji_cloud_bootstrap_incomplete`
+- `200` mit Platform-, Workspace-, Lizenz-, API-, WebSocket- und MQTT-Daten
+
+Die erfolgreiche Antwort enthält sensible Runtime-Credentials und ist für
+reale Pilot-2-Nutzung nur über HTTPS vorgesehen.
+
 ## DJI FlightHub 2 OpenAPI V2
 
 ### `GET /api/v1/fh2/status`

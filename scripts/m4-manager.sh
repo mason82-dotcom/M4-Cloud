@@ -67,6 +67,9 @@ case "$cmd" in
   verify)
     exec "$repo_root/scripts/verify-quadlet.sh"
     ;;
+  dji-cloud-status)
+    curl_json "$base_url/api/v1/dji/cloud/status"
+    ;;
   camera-status)
     curl_json "$base_url/api/v1/cameras/status"
     ;;
@@ -148,7 +151,8 @@ Autostart:
   scripts/m4-manager.sh enable
   scripts/m4-manager.sh disable
 
-DJI Kamera-/Gimbal-Daten (read-only):
+DJI Cloud API / Kamera-/Gimbal-Daten (read-only):
+  scripts/m4-manager.sh dji-cloud-status
   scripts/m4-manager.sh camera-status
   scripts/m4-manager.sh camera-paths
   scripts/m4-manager.sh camera-telemetry [LIMIT]

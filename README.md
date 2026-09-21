@@ -31,6 +31,7 @@ Mapping- und multispektralen Datenpfaden.
 
 Der Manager führt beide Fachbeiträge zusammen, hält Backend, Deployment,
 Tests und Dokumentation konsistent und ist die zentrale Integrationsstelle.
+Nur der Direktor startet und bewertet die zentrale CI (`workflow_dispatch`).
 
 Ausführlich: `docs/PROJECT-WORKFLOW.md`.
 
@@ -71,6 +72,34 @@ Für WSL2 + Ubuntu + das neue Microsoft-WSLC siehe `docs/SETUP-WSL2-WSLC.md`.
 | `postgres` | M4-eigene Persistenz | intern |
 | `mqtt` | MQTT-Integrationspunkt | 127.0.0.1:1883 |
 | `prometheus` | optionales Monitoring-Profil | 127.0.0.1:9090 |
+
+## DJI Cloud API Ingress
+
+Der direkte DJI-Pfad ist getrennt vom FH2-Upstream:
+
+```text
+DJI Pilot 2 / Dock -> MQTT / HTTPS / WebSocket -> M4
+```
+
+Status:
+
+```bash
+./scripts/m4-manager.sh dji-cloud-status
+```
+
+Der lokale Broker verwendet keine anonymen Clients mehr. Worker, Health und
+Pilot besitzen getrennte Credentials/ACLs. DRC und Gerätekommandos bleiben
+deaktiviert.
+
+Pilot-2-Bootstrap:
+
+```text
+GET /api/v1/dji/cloud/bootstrap
+X-M4-Bootstrap-Token: <DJI_BOOTSTRAP_TOKEN>
+```
+
+Der Bootstrap ist für die spätere H5-/JSBridge-Anbindung vorbereitet. Für
+reale Pilot-2-Nutzung fehlen noch der externe MQTT-TLS-Listener und HTTPS/H5.
 
 ## DJI FlightHub 2 anbinden
 

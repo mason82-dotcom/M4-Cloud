@@ -7,6 +7,32 @@ On-Premises-/Privatization-Installation. Das Repository enthält keine
 proprietären FlightHub-2-Serverbinärdateien und bildet keine DJI-internen
 Dienste nach.
 
+## Direkte DJI Cloud API
+
+Dieser Pfad bleibt vom FH2-OpenAPI-Adapter getrennt:
+
+```text
+DJI Pilot 2 / Dock -> MQTT / HTTPS / WebSocket -> M4
+```
+
+Der Broker lehnt anonyme Clients ab und trennt `m4-worker`, `m4-health`
+und `dji-pilot` per ACL. DRC ist nicht freigegeben.
+
+M4-Bootstrap:
+
+```text
+GET /api/v1/dji/cloud/bootstrap
+X-M4-Bootstrap-Token: <DJI_BOOTSTRAP_TOKEN>
+```
+
+Noch offen für reale Pilot-2-Anbindung:
+
+- externer MQTT-TLS-Listener
+- H5-/JSBridge-Einstiegsseite
+- HTTPS/Login-Absicherung
+- Gerätekommandos
+- DRC
+
 ## FH2 OpenAPI V2
 
 Die erste produktive FH2-HTTP-Integration orientiert sich an DJIs offiziellem
