@@ -63,6 +63,7 @@ def test_bootstrap_never_returns_mqtt_password() -> None:
     assert response.status_code == 200
     body = response.json()
     assert body["mqtt"]["password_in_response"] is False
+    assert body["mqtt"]["tls"] is False
     assert "password" not in {
         key for key in body["mqtt"] if key != "password_in_response"
     }
