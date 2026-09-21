@@ -208,6 +208,102 @@ Die Kameraerkennung führt keine der folgenden Aktionen aus:
 Die offiziellen Cloud-API-Demo-Pfade für Start/Stop/Update/Switch sind bekannt,
 werden aber in diesem M4-Schritt nicht exponiert.
 
+## Kamera-/Gimbal-Telemetrie
+
+Zusätzlich zu den statischeren Live-Capacity-Pfaden kann M4 den zuletzt
+persistierten DJI-MQTT-Zustand normalisieren:
+
+```http
+GET /api/v1/cameras/telemetry?limit=200
+```
+
+Manager:
+
+```bash
+./scripts/m4-manager.sh camera-telemetry
+./scripts/m4-manager.sh camera-telemetry 500
+```
+
+Der Normalizer arbeitet ausschließlich auf bereits empfangenen und
+persistierten MQTT-Ereignissen. Für reale DJI-Telemetrie müssen die in der
+Zielinstallation freigegebenen Topics über `DJI_MQTT_TOPICS` abonniert sein.
+Der sichere Default `m4/fh2/#` wird dadurch nicht automatisch erweitert.
+
+### DJI Kamera-State
+
+Für `thing/product/<sn>/osd` und `thing/product/<sn>/state` liest M4 aus
+`data.cameras[]` unter anderem die tatsächlich vorhandenen Felder:
+
+```text
+payload_index
+camera_mode
+photo_state
+recording_state
+screen_split_enable
+remain_photo_num
+remain_record_duration
+record_time
+zoom_factor
+ir_zoom_factor
+photo_storage_settings
+video_storage_settings
+wide_exposure_mode
+wide_iso
+wide_shutter_speed
+wide_exposure_value
+zoom_exposure_mode
+zoom_iso
+zoom_shutter_speed
+zoom_exposure_value
+zoom_focus_mode
+zoom_focus_value
+zoom_max_focus_value
+zoom_min_focus_value
+zoom_calibrate_farthest_focus_value
+zoom_calibrate_nearest_focus_value
+zoom_focus_state
+ir_metering_mode
+ir_metering_point
+ir_metering_area
+```
+
+Nicht vorhandene Felder werden nicht erfunden und nicht mit Defaultwerten
+gefüllt.
+
+### Gimbal
+
+M4 normalisiert folgende Winkel, wenn sie vom DJI-Datenpfad geliefert werden:
+
+```text
+gimbal_pitch
+gimbal_roll
+gimbal_yaw
+```
+
+Die Zuordnung erfolgt ausschließlich über den von DJI gelieferten
+`payload_index` oder über einen Payload-Key im Format
+`<type>-<subType>-<position>`.
+
+Wenn ein Gimbal-Datensatz keine eindeutige Payload-Kennung enthält, bleibt:
+
+```json
+"payload_index": null
+```
+
+M4 ordnet ihn nicht heuristisch einer Kamera zu.
+
+Bereits persistierte High-Frequency-/DRC-Telemetrie kann vom Parser gelesen
+werden. Der Telemetrie-Endpunkt aktiviert jedoch weder DRC noch Payload Control
+und sendet keine Kamera- oder Gimbalbefehle.
+
+### Snapshot-Zusammenführung
+
+`recent_events()` liefert die Ereignisse newest-first. Der Telemetrieparser
+behält daher den neuesten Wert eines Feldes und ergänzt nur Felder, die im
+neueren Partial-Update fehlen. Dadurch bleiben etwa ein neuer Gimbalwinkel und
+der zuletzt bekannte Kamera-/Zoomzustand gemeinsam sichtbar, ohne ältere Werte
+über neuere zu schreiben.
+
 ## Multispektral
 
 Multispektral verwendet künftig die dynamische Kameraliste als
