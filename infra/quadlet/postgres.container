@@ -1,0 +1,22 @@
+[Unit]
+Description=M4-Cloud PostgreSQL
+PartOf=m4-cloud.target
+
+[Container]
+Image=docker.io/library/postgres:17-alpine
+ContainerName=m4-postgres
+EnvironmentFile=%h/.config/m4-cloud/m4.env
+Network=m4.network
+NetworkAlias=postgres
+Volume=postgres-data.volume:/var/lib/postgresql/data
+Volume=%h/.config/m4-cloud/assets/init.sql:/docker-entrypoint-initdb.d/001-init.sql:ro
+HealthCmd=PGPASSWORD="$POSTGRES_PASSWORD" psql -h 127.0.0.1 -U "$POSTGRES_USER" -d "$POSTGRES_DB" -tAc "SELECT 1" | grep -q 1
+HealthInterval=10s
+HealthTimeout=5s
+HealthRetries=5
+HealthOnFailure=kill
+Notify=healthy
+
+[Service]
+Restart=on-failure
+TimeoutStartSec=180
