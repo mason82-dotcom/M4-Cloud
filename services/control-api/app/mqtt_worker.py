@@ -60,6 +60,8 @@ def main() -> None:
         mqtt.CallbackAPIVersion.VERSION2,
         client_id="m4-integration-worker",
     )
+    if settings.mqtt_username:
+        client.username_pw_set(settings.mqtt_username, settings.mqtt_password)
     client.on_connect = on_connect
     client.on_message = on_message
 

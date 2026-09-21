@@ -124,3 +124,70 @@ Nach erfolgreicher Phase-1-Abnahme folgen:
 5. Topology-/Status-Verarbeitung.
 6. definierte Service-Replies und Requests-Replies.
 7. anschließend ausgewählte, explizit freigegebene Downlink-Kommandos.
+
+
+## Pilot 2 Bootstrap API
+
+M4 stellt einen eigenen, token-geschützten Bootstrap-Endpunkt bereit:
+
+```text
+GET /api/v1/dji/cloud/bootstrap
+X-M4-Bootstrap-Token: <DJI_BOOTSTRAP_TOKEN>
+```
+
+Der Endpoint ist **kein DJI-Endpunkt**. Er liefert der M4-H5-WebView die Werte,
+die anschließend über die DJI JSBridge an Pilot 2 übergeben werden:
+
+- Platform-/Workspace-Informationen,
+- DJI App ID / App Key / License,
+- API Host + X-Auth-Token,
+- WebSocket Host + Token,
+- MQTT Host + Username + Passwort,
+- freigegebene M4-Funktionen.
+
+Solange `DJI_CLOUD_API_ENABLED=false` ist oder Pflichtwerte fehlen, liefert
+der Endpoint keine Bootstrap-Konfiguration.
+
+Die DJI Developer Credentials werden nicht im Repository gespeichert. Sie
+werden ausschließlich über `.env` bzw. die installierte Runtime-Umgebung
+bereitgestellt.
+
+## MQTT Authentifizierung und ACL
+
+Der M4-Broker akzeptiert keine anonymen MQTT-Clients mehr.
+
+Interne Rollen:
+
+- `m4-worker`: ausschließlich Lesen der M4-/DJI-Uplink-Topics.
+- `m4-health`: Healthcheck sowie definierte Verify-/CI-Testpublishes.
+- `dji-pilot`: nur bei aktivierter DJI Cloud API.
+
+Die `dji-pilot`-ACL erlaubt Schreiben nur auf die DJI-Uplink-Richtung:
+
+```text
+thing/product/+/osd
+thing/product/+/state
+thing/product/+/services_reply
+thing/product/+/events
+thing/product/+/requests
+thing/product/+/property/set_reply
+sys/product/+/status
+```
+
+Lesen ist nur für die DJI-Cloud-Downlink-Antwortkanäle vorgesehen:
+
+```text
+thing/product/+/services
+thing/product/+/events_reply
+thing/product/+/requests_reply
+thing/product/+/property/set
+sys/product/+/status_reply
+```
+
+`drc/up` und `drc/down` sind für `dji-pilot` in dieser Phase nicht
+freigegeben.
+
+Der Broker bleibt weiterhin standardmäßig nur auf
+`127.0.0.1:1883` am Host veröffentlicht. Username/Passwort ohne TLS dürfen
+nicht als LAN-/WAN-Produktionszugang verwendet werden. Der nächste Schritt ist
+ein separater TLS-Listener für Pilot 2.

@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+import hmac
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, HTTPException, Response, WebSocket, WebSocketDisconnect, status
+from fastapi import FastAPI, Header, HTTPException, Response, WebSocket, WebSocketDisconnect, status
 from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 
 from .config import APP_NAME, APP_VERSION, Settings
@@ -68,6 +69,7 @@ def system_status() -> dict[str, object]:
         },
         "dji_cloud_api": {
             "enabled": settings.dji_cloud_api_enabled,
+            "bootstrap_ready": settings.dji_bootstrap_ready,
         },
         "integration": {
             "mqtt": {"host": settings.mqtt_host, "port": settings.mqtt_port},
@@ -92,10 +94,69 @@ def dji_cloud_status() -> dict[str, object]:
         "mqtt_reachable": (
             settings.mqtt_reachable() if settings.dji_cloud_api_enabled else False
         ),
+        "bootstrap_ready": settings.dji_bootstrap_ready,
         "subscriptions": subscriptions,
         "capabilities": {
             "mqtt_ingest": settings.dji_cloud_api_enabled,
-            "pilot2_webview_bootstrap": False,
+            "mqtt_authentication": True,
+            "mqtt_acl": True,
+            "pilot2_webview_bootstrap": settings.dji_bootstrap_ready,
+            "device_commands": False,
+            "drc": False,
+        },
+    }
+
+
+@app.get("/api/v1/dji/cloud/bootstrap")
+def dji_cloud_bootstrap(
+    x_m4_bootstrap_token: str | None = Header(
+        default=None,
+        alias="X-M4-Bootstrap-Token",
+    ),
+) -> dict[str, object]:
+    settings = Settings.from_env()
+    if not settings.dji_cloud_api_enabled:
+        raise HTTPException(status_code=503, detail="dji_cloud_api_disabled")
+    if not settings.dji_bootstrap_ready:
+        raise HTTPException(status_code=503, detail="dji_cloud_bootstrap_incomplete")
+    if not x_m4_bootstrap_token or not hmac.compare_digest(
+        x_m4_bootstrap_token,
+        settings.dji_bootstrap_token,
+    ):
+        raise HTTPException(status_code=401, detail="invalid_bootstrap_token")
+
+    return {
+        "platform": {
+            "name": settings.dji_platform_name,
+        },
+        "workspace": {
+            "id": settings.dji_workspace_id,
+            "name": settings.dji_workspace_name,
+            "description": settings.dji_workspace_description,
+        },
+        "license": {
+            "app_id": settings.dji_app_id,
+            "app_key": settings.dji_app_key,
+            "license": settings.dji_app_license,
+        },
+        "api": {
+            "host": settings.dji_api_host,
+            "token": settings.dji_api_token,
+        },
+        "websocket": {
+            "host": settings.dji_ws_host,
+            "token": settings.dji_ws_token,
+        },
+        "mqtt": {
+            "host": settings.dji_mqtt_external_host,
+            "username": settings.dji_mqtt_username,
+            "password": settings.dji_mqtt_password,
+        },
+        "features": {
+            "map": True,
+            "tsa": True,
+            "media": False,
+            "mission": False,
             "device_commands": False,
             "drc": False,
         },

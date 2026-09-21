@@ -30,9 +30,26 @@ services:
       POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}"
       MQTT_HOST: "${MQTT_HOST:-mqtt}"
       MQTT_PORT: "${MQTT_PORT:-1883}"
+      MQTT_WORKER_USERNAME: "${MQTT_WORKER_USERNAME:-m4-worker}"
+      MQTT_WORKER_PASSWORD: "${MQTT_WORKER_PASSWORD:?set MQTT_WORKER_PASSWORD in .env}"
       DJI_MQTT_TOPICS: "${DJI_MQTT_TOPICS:-m4/fh2/#}"
       DJI_CLOUD_API_ENABLED: "${DJI_CLOUD_API_ENABLED:-false}"
       DJI_CLOUD_API_TOPICS: "${DJI_CLOUD_API_TOPICS:-thing/product/+/osd,thing/product/+/state,thing/product/+/services_reply,thing/product/+/events,thing/product/+/requests,thing/product/+/property/set_reply,thing/product/+/drc/up,sys/product/+/status}"
+      DJI_BOOTSTRAP_TOKEN: "${DJI_BOOTSTRAP_TOKEN:-}"
+      DJI_PLATFORM_NAME: "${DJI_PLATFORM_NAME:-M4 Cloud}"
+      DJI_WORKSPACE_ID: "${DJI_WORKSPACE_ID:-}"
+      DJI_WORKSPACE_NAME: "${DJI_WORKSPACE_NAME:-M4 Workspace}"
+      DJI_WORKSPACE_DESCRIPTION: "${DJI_WORKSPACE_DESCRIPTION:-M4 DJI Cloud}"
+      DJI_APP_ID: "${DJI_APP_ID:-}"
+      DJI_APP_KEY: "${DJI_APP_KEY:-}"
+      DJI_APP_LICENSE: "${DJI_APP_LICENSE:-}"
+      DJI_API_HOST: "${DJI_API_HOST:-}"
+      DJI_API_TOKEN: "${DJI_API_TOKEN:-}"
+      DJI_WS_HOST: "${DJI_WS_HOST:-}"
+      DJI_WS_TOKEN: "${DJI_WS_TOKEN:-}"
+      DJI_MQTT_EXTERNAL_HOST: "${DJI_MQTT_EXTERNAL_HOST:-}"
+      DJI_MQTT_USERNAME: "${DJI_MQTT_USERNAME:-dji-pilot}"
+      DJI_MQTT_PASSWORD: "${DJI_MQTT_PASSWORD:-}"
       FH2_UPSTREAM_BASE_URL: "${FH2_UPSTREAM_BASE_URL:-}"
       FH2_API_TOKEN: "${FH2_API_TOKEN:-}"
       FH2_UPSTREAM_VERIFY_TLS: "${FH2_UPSTREAM_VERIFY_TLS:-true}"
@@ -80,15 +97,24 @@ services:
     networks: [m4]
 
   mqtt:
-    image: eclipse-mosquitto:2
+    build:
+      context: ./infra/mosquitto
+    image: m4-mqtt:current
     restart: unless-stopped
+    environment:
+      MQTT_WORKER_USERNAME: "${MQTT_WORKER_USERNAME:-m4-worker}"
+      MQTT_WORKER_PASSWORD: "${MQTT_WORKER_PASSWORD:?set MQTT_WORKER_PASSWORD in .env}"
+      MQTT_HEALTH_USERNAME: "${MQTT_HEALTH_USERNAME:-m4-health}"
+      MQTT_HEALTH_PASSWORD: "${MQTT_HEALTH_PASSWORD:?set MQTT_HEALTH_PASSWORD in .env}"
+      DJI_CLOUD_API_ENABLED: "${DJI_CLOUD_API_ENABLED:-false}"
+      DJI_MQTT_USERNAME: "${DJI_MQTT_USERNAME:-dji-pilot}"
+      DJI_MQTT_PASSWORD: "${DJI_MQTT_PASSWORD:-}"
     ports:
       - "${M4_MQTT_BIND:-127.0.0.1}:${M4_MQTT_PORT:-1883}:1883"
     volumes:
-      - ./infra/mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
       - mqtt-data:/mosquitto/data
     healthcheck:
-      test: ["CMD-SHELL", "mosquitto_pub -h 127.0.0.1 -p 1883 -t m4/health -m ping >/dev/null 2>&1"]
+      test: ["CMD-SHELL", "mosquitto_pub -h 127.0.0.1 -p 1883 -u \"$$MQTT_HEALTH_USERNAME\" -P \"$$MQTT_HEALTH_PASSWORD\" -t m4/health -m ping >/dev/null 2>&1"]
       interval: 10s
       timeout: 5s
       retries: 5

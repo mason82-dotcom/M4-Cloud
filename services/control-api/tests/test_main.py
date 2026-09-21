@@ -135,3 +135,51 @@ def test_dji_cloud_status_enabled(monkeypatch) -> None:
     assert payload["enabled"] is True
     assert payload["mqtt_reachable"] is True
     assert "thing/product/+/osd" in payload["subscriptions"]
+
+
+def _set_complete_dji_bootstrap(monkeypatch) -> None:
+    values = {
+        "DJI_CLOUD_API_ENABLED": "true",
+        "DJI_BOOTSTRAP_TOKEN": "bootstrap-secret",
+        "DJI_PLATFORM_NAME": "M4 Cloud",
+        "DJI_WORKSPACE_ID": "e3dea0f5-37f2-4d79-ae58-490af3228069",
+        "DJI_WORKSPACE_NAME": "M4 Workspace",
+        "DJI_WORKSPACE_DESCRIPTION": "M4 DJI Cloud",
+        "DJI_APP_ID": "app-id",
+        "DJI_APP_KEY": "app-key",
+        "DJI_APP_LICENSE": "license",
+        "DJI_API_HOST": "https://m4.example",
+        "DJI_API_TOKEN": "api-token",
+        "DJI_WS_HOST": "wss://m4.example/ws/dji",
+        "DJI_WS_TOKEN": "ws-token",
+        "DJI_MQTT_EXTERNAL_HOST": "tcp://m4.example:1883",
+        "DJI_MQTT_USERNAME": "dji-pilot",
+        "DJI_MQTT_PASSWORD": "mqtt-password",
+    }
+    for key, value in values.items():
+        monkeypatch.setenv(key, value)
+
+
+def test_dji_bootstrap_requires_token(monkeypatch) -> None:
+    _set_complete_dji_bootstrap(monkeypatch)
+
+    response = client.get("/api/v1/dji/cloud/bootstrap")
+
+    assert response.status_code == 401
+
+
+def test_dji_bootstrap_returns_pilot2_configuration(monkeypatch) -> None:
+    _set_complete_dji_bootstrap(monkeypatch)
+
+    response = client.get(
+        "/api/v1/dji/cloud/bootstrap",
+        headers={"X-M4-Bootstrap-Token": "bootstrap-secret"},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["workspace"]["id"] == "e3dea0f5-37f2-4d79-ae58-490af3228069"
+    assert payload["license"]["app_id"] == "app-id"
+    assert payload["mqtt"]["username"] == "dji-pilot"
+    assert payload["features"]["device_commands"] is False
+    assert payload["features"]["drc"] is False

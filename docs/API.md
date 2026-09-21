@@ -68,3 +68,18 @@ direkt im Compose-Netz darauf zu.
 Status der optionalen DJI-Cloud-API-MQTT-Ingest-Schicht. Der Endpoint gibt
 keine Zugangsdaten aus. In Phase 1 sind Pilot-2-Webview-Bootstrap,
 Gerätekommandos und DRC bewusst noch deaktiviert.
+
+
+## `GET /api/v1/dji/cloud/bootstrap`
+
+M4-eigener Bootstrap für die spätere Pilot-2-H5-Seite.
+
+Erforderlicher Header:
+
+```text
+X-M4-Bootstrap-Token: <DJI_BOOTSTRAP_TOKEN>
+```
+
+Der Endpoint liefert nur bei aktivierter und vollständig konfigurierter DJI
+Cloud API Plattform-, Workspace-, Lizenz-, API-, WebSocket- und
+MQTT-Konfiguration. DRC und Gerätekommandos bleiben deaktiviert.

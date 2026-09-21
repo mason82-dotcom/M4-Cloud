@@ -40,9 +40,21 @@ echo "Systemstatus:"
 curl --fail --silent "$base_url/api/v1/system/status"
 echo
 
+echo "DJI Cloud API Status:"
+curl --fail --silent "$base_url/api/v1/dji/cloud/status"
+echo
+
 echo "FH2-Status:"
 curl --fail --silent "$base_url/api/v1/fh2/status"
 echo
+
+echo "MQTT-Authentifizierungstest:"
+if podman exec m4-mqtt mosquitto_pub   -h 127.0.0.1 -p 1883 -t m4/health -m anonymous-must-fail >/dev/null 2>&1; then
+  echo "Fehler: anonymer MQTT-Zugriff wurde akzeptiert." >&2
+  exit 1
+fi
+podman exec m4-mqtt sh -c   'mosquitto_pub -h 127.0.0.1 -p 1883 -u "$MQTT_HEALTH_USERNAME" -P "$MQTT_HEALTH_PASSWORD" -t m4/health -m authenticated'
+echo "Anonym abgewiesen, authentifiziert akzeptiert: OK"
 
 marker="quadlet-verify-$(date +%s)-$$"
 
@@ -58,7 +70,7 @@ fi
 echo "HTTP -> PostgreSQL: OK"
 
 echo "MQTT-Persistenztest:"
-podman exec m4-mqtt mosquitto_pub   -h 127.0.0.1   -p 1883   -q 1   -t m4/fh2/verify   -m "{\"marker\":\"$marker-mqtt\"}"
+podman exec m4-mqtt sh -c   'mosquitto_pub -h 127.0.0.1 -p 1883 -u "$MQTT_HEALTH_USERNAME" -P "$MQTT_HEALTH_PASSWORD" -q 1 -t m4/fh2/verify -m '"'"'{"marker":"'"$marker-mqtt"'"}'"'"''
 
 attempt=0
 while true; do
