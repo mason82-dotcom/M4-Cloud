@@ -21,6 +21,7 @@ from .db import (
     recent_events,
     store_event,
 )
+from .dji_telemetry import latest_camera_gimbal_telemetry
 from .fh2 import (
     FH2APIError,
     FH2Client,
@@ -216,6 +217,19 @@ async def camera_paths() -> dict[str, object]:
         "source": "dji-cloud-api-live-capacity",
         "count": len(paths),
         "paths": [camera_path_to_dict(path) for path in paths],
+    }
+
+
+@app.get("/api/v1/cameras/telemetry")
+def camera_telemetry(
+    limit: int = Query(default=200, ge=1, le=500),
+) -> dict[str, object]:
+    telemetry = latest_camera_gimbal_telemetry(recent_events(limit))
+    return {
+        "source": "dji-mqtt-events",
+        "read_only": True,
+        "count": len(telemetry),
+        "telemetry": telemetry,
     }
 
 
