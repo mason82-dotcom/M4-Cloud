@@ -8,9 +8,12 @@
 - Authentifizierung über `x-auth-token`
 - Normalisierung von Payload-/Kamera-/Videopfaden zu `video_id`
 - Unterstützung für snake_case- und CamelCase-Antwortmodelle
-- Manager-Kommandos `camera-status` und `camera-paths`
+- Manager-Kommandos `camera-status`, `camera-paths` und `camera-telemetry`
+- read-only Normalisierung persistierter DJI-MQTT-Kamera-/Gimbal-Telemetrie
+- Zuordnung über `device_sn + payload_index`, ohne Modellnamen-Heuristik
+- Kamera-, Zoom-, Belichtungs-, Fokus- und optionale Gimbalwinkel
 - Lyrebird ist für die Kameraerkennung nicht erforderlich
-- Funktion bleibt read-only; keine Stream-/Kamerasteuerung
+- Funktion bleibt read-only; keine Stream-/Kamera-/Gimbalsteuerung und kein DRC
 
 
 ## 1.1.0
