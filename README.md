@@ -75,8 +75,9 @@ On-Premises-Ausprägung. M4 erfindet deshalb keine undokumentierten DJI-Pfade.
 Konkrete Ressourcen werden gegen die offizielle OpenAPI der eingesetzten
 FH2-Version angebunden.
 
-Für MQTT werden die offiziell für die Zielinstallation vorgesehenen Topics
-über `DJI_MQTT_TOPICS` gesetzt.
+Für generische/FH2-MQTT-Topics wird `DJI_MQTT_TOPICS` verwendet. Der direkte
+DJI-Cloud-API-Pfad wird getrennt über `DJI_CLOUD_API_ENABLED` und
+`DJI_CLOUD_API_TOPICS` aktiviert.
 
 ## Dokumentation
 
