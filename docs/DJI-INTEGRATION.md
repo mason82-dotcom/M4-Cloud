@@ -84,6 +84,26 @@ persistiert empfangene Ereignisse. Standard bleibt `m4/fh2/#`; reale
 DJI-Topics werden erst gemäß der eingesetzten FH2-/Cloud-API-Konfiguration
 eingetragen.
 
+## Kamera-/Gimbal-Telemetrie
+
+Persistierte DJI-MQTT-Ereignisse aus `thing/product/<sn>/osd` und
+`thing/product/<sn>/state` können read-only zu einem aktuellen
+Payload-Snapshot normalisiert werden:
+
+```text
+GET /api/v1/cameras/telemetry
+```
+
+Die stabile Zuordnung erfolgt über `device_sn + payload_index`. Kamera-State
+und optionale Gimbalwinkel werden nur übernommen, wenn sie im empfangenen
+DJI-Payload vorhanden sind. Fehlende Payload-Zuordnungen werden nicht anhand
+des Gerätemodells geraten.
+
+Der Parser kann bereits persistierte DRC-Telemetrie lesen, aktiviert aber
+weder DRC noch Kamera-, Gimbal- oder Payload-Steuerung.
+
+Details: `docs/CAMERA-PATHS.md`.
+
 ## HTTP-Events
 
 `POST /api/v1/events` ist ein neutraler M4-Webhook-Eingang für offiziell
