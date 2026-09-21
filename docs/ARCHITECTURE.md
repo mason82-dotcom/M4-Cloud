@@ -1,50 +1,85 @@
 # Architektur
 
-## Systemgrenze
-
-M4-Cloud ist der eigene Integrations- und Kontroll-Layer. DJI FlightHub 2
-On-Premises bleibt ein externer, offiziell bezogener Upstream.
+## Getrennte DJI-Pfade
 
 ```text
-DJI Pilot 2 / DJI Dock / FH2 On-Premises
-                  |
-        offizielle Schnittstellen
-      MQTT / HTTPS / WebSocket / OpenAPI
-                  |
-             [M4-Cloud]
-                  |
-       +----------+----------+
-       |                     |
-  Reverse Proxy          MQTT Broker
+DJI Pilot 2 / Dock
        |
-   Control API
-       |
-   PostgreSQL
+ MQTT / HTTPS / WS
+       v
++-----------------------+
+| DJI Cloud API Adapter |
++-----------+-----------+
+            |
+            v
+        M4 intern
+            ^
+            |
++-----------+-----------+
+| FH2 OpenAPI V2 Client |
++-----------------------+
+            ^
+            |
+FlightHub 2 Privatization
 ```
+
+### DJI Cloud API
+
+M4 ist der eingehende Integrationsserver.
+
+Aktuell:
+
+- MQTT-Ingest
+- Auth/ACL
+- Pilot-2-Bootstrap
+- Live-Capacity/Kamerapfade
+- Kamera-/Gimbal-Telemetrie
+- eigener M4-WebSocket
+
+Noch nicht:
+
+- externer MQTT-TLS-Listener
+- Pilot-2-H5-/JSBridge-Seite
+- Cloud-API-HTTPS-Module vollständig
+- Gerätekommandos
+- DRC
+
+### FH2 Privatization OpenAPI V2
+
+M4 ist read-only Client eines vorhandenen DJI-FH2-Servers.
+
+Aktuell:
+
+- Geräte
+- HMS
+- Waylines
+- Flight Tasks
+
+Authentifizierung, Fehlersemantik und Transport bleiben strikt vom Cloud-API-Ingress getrennt.
 
 ## Eigene Komponenten
 
-- **Reverse Proxy:** zentraler HTTP-Einstieg und WebSocket-Passthrough.
-- **Control API:** Liveness, Readiness, Systemstatus und spätere Adapter.
-- **PostgreSQL:** ausschließlich M4-eigene Zustände und Konfigurationen.
-- **MQTT:** Integrationspunkt für offiziell unterstützte DJI-Cloud-API-Flows.
+- Reverse Proxy
+- Control API
+- PostgreSQL
+- gehärteter Mosquitto
+- MQTT Integration Worker
+- Prometheus
 
-## Nicht Bestandteil des Repositories
+## Runtime
 
-- DJI FlightHub 2 On-Premises Binärdateien, Container oder Installationspakete
-- DJI-interne Services
-- Lizenzdateien
-- proprietäre Implementierungen aus Reverse Engineering
+### Podman + Quadlet
 
-## Integrationsprinzip
+Empfohlener lokaler WSL2-/Linux-Pfad.
 
-Adapter werden ausschließlich gegen dokumentierte oder offiziell freigegebene
-Schnittstellen gebaut. Der FH2-Upstream wird über Konfiguration referenziert.
-M4-Cloud muss ohne erreichbaren FH2-Upstream startfähig und diagnostizierbar
-bleiben.
+### Docker Compose
 
-## V1-Verantwortungsgrenze
+Referenzpfad und Basis für die vom Direktor manuell gestartete Validation.
 
-V1 stellt den lokalen Kontrollserver-Rahmen bereit. Eine konkrete DJI-Instanz
-wird erst über deren offiziell bereitgestellte Parameter, Zertifikate und
-Zugangsdaten angebunden. Diese Daten gehören nicht ins Repository.
+### WSLC
+
+Optional/experimentell, nicht primäre Multi-Service-Runtime.
+
+## Datenmodell
+
+Beide DJI-Pfade dürfen oberhalb ihrer Adapter gemeinsame M4-Ereignis-/Persistenzmodelle verwenden. Adapter-spezifische Authentifizierung und Fehlercodes werden nicht vermischt.

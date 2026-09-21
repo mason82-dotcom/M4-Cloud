@@ -1,78 +1,93 @@
 # Betrieb
 
-## Start
+## Podman + Quadlet
+
+Empfohlener WSL2-/Linux-Pfad:
 
 ```bash
-cp .env.example .env
+cd ~/src/M4-Cloud
+cp -n .env.example .env
+chmod 600 .env
+nano .env
 # POSTGRES_PASSWORD setzen
-docker compose up -d --build
+
+./scripts/m4-manager.sh install
+./scripts/m4-manager.sh start
+./scripts/m4-manager.sh verify
 ```
 
-## Abnahme
+Die lokale Abnahme prüft unter anderem:
+
+- Health/Readiness
+- FH2-Routen
+- DJI-Cloud-Status
+- Kamera-/Telemetry-Routen
+- Anonymous MQTT wird abgewiesen
+- authentifizierter MQTT-Zugriff funktioniert
+- HTTP -> PostgreSQL
+- MQTT -> Worker -> PostgreSQL
+
+## Manager
 
 ```bash
-sh scripts/verify.sh
+./scripts/m4-manager.sh status
+./scripts/m4-manager.sh logs
+./scripts/m4-manager.sh dji-cloud-status
+./scripts/m4-manager.sh camera-status
+./scripts/m4-manager.sh camera-paths
+./scripts/m4-manager.sh camera-telemetry
+./scripts/m4-manager.sh fh2-status
+./scripts/m4-manager.sh fh2-verify
 ```
 
-Erwartet werden:
+## Docker Compose
 
-- Reverse Proxy healthy
-- Control API healthy
-- PostgreSQL healthy
-- MQTT healthy
-- Integration Worker mit frischem Heartbeat
-- `/ready` HTTP 200
-- System- und FH2-Status-Endpunkte erreichbar
+Compose bleibt als Referenzpfad erhalten.
+
+`.env` benötigt mindestens:
+
+```env
+POSTGRES_PASSWORD=...
+MQTT_WORKER_PASSWORD=...
+MQTT_HEALTH_PASSWORD=...
+```
+
+## Director Validation
+
+Die zentrale GitHub-Actions-Validation ist ausschließlich Sache des Direktors.
+
+Workflow:
+
+```text
+workflow_dispatch
+```
+
+Manager, RC Pro und Multispektral starten keine CI-Läufe.
 
 ## Monitoring
 
-Die Control API exportiert Prometheus-Metriken unter `/metrics`.
-
-Optional:
-
 ```bash
-docker compose --profile monitoring up -d
-```
-
-Prometheus wird standardmäßig ausschließlich auf
-`127.0.0.1:9090` veröffentlicht.
-
-## Backup
-
-PostgreSQL:
-
-```bash
-mkdir -p backups
-docker compose exec -T postgres pg_dump -U "${POSTGRES_USER:-m4cloud}" "${POSTGRES_DB:-m4cloud}"   > "backups/m4cloud-$(date +%Y%m%d-%H%M%S).sql"
-```
-
-MQTT-Persistenz liegt im Docker-Volume `mqtt-data`. Für vollständige
-Host-Backups müssen die Docker-Volumes zusammen mit der `.env` außerhalb
-des Git-Repositories gesichert werden.
-
-## Restore PostgreSQL
-
-Nur gegen eine bewusst ausgewählte, leere bzw. kompatible Datenbank ausführen:
-
-```bash
-cat backups/<backup>.sql | docker compose exec -T postgres   psql -U "${POSTGRES_USER:-m4cloud}" "${POSTGRES_DB:-m4cloud}"
+./scripts/m4-manager.sh monitoring-start
+./scripts/m4-manager.sh monitoring-status
 ```
 
 ## Update
 
-1. Backup erstellen.
-2. Neue Version auschecken.
-3. `docker compose pull`
-4. `docker compose up -d --build`
-5. `sh scripts/verify.sh`
-6. Erst nach erfolgreicher Abnahme alte Images bereinigen.
+```bash
+git pull --ff-only
+./scripts/m4-manager.sh install
+./scripts/m4-manager.sh restart
+./scripts/m4-manager.sh verify
+```
 
-## Fehlerdiagnose
+## Diagnose
 
 ```bash
-docker compose ps
-docker compose logs --tail=200 reverse-proxy control-api integration-worker postgres mqtt
-curl -i http://localhost:8080/health
-curl -i http://localhost:8080/ready
-curl -s http://localhost:8080/api/v1/fh2/status
+./scripts/m4-manager.sh status
+journalctl --user -u mqtt.service -n 200 --no-pager
+journalctl --user -u control-api.service -n 200 --no-pager
+journalctl --user -u integration-worker.service -n 200 --no-pager
+curl -s http://127.0.0.1:8080/api/v1/system/status | jq
+curl -s http://127.0.0.1:8080/api/v1/dji/cloud/status | jq
+curl -s http://127.0.0.1:8080/api/v1/fh2/status | jq
 ```
