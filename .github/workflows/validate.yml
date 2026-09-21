@@ -15,6 +15,8 @@ jobs:
     timeout-minutes: 12
     env:
       POSTGRES_PASSWORD: ci-test-password
+      MQTT_WORKER_PASSWORD: ci-worker-password
+      MQTT_HEALTH_PASSWORD: ci-health-password
       M4_HTTP_BIND: 127.0.0.1
       M4_HTTP_PORT: 8080
       M4_MQTT_BIND: 127.0.0.1
@@ -74,10 +76,19 @@ jobs:
           curl --fail --silent             -H 'Content-Type: application/json'             -d '{"source":"ci","topic":"http/test","payload":{"http":true}}'             http://127.0.0.1:8080/api/v1/events
           curl --fail --silent http://127.0.0.1:8080/api/v1/events?limit=20 | grep -q '"http":true'
 
+      - name: Verify MQTT authentication
+        shell: bash
+        run: |
+          if docker compose exec -T mqtt mosquitto_pub -h 127.0.0.1 -p 1883 -t m4/health -m anonymous; then
+            echo "Anonymous MQTT access must be rejected"
+            exit 1
+          fi
+          docker compose exec -T mqtt sh -c 'mosquitto_pub -h 127.0.0.1 -p 1883 -u "$MQTT_HEALTH_USERNAME" -P "$MQTT_HEALTH_PASSWORD" -t m4/health -m authenticated'
+
       - name: Verify MQTT worker persistence
         shell: bash
         run: |
-          docker compose exec -T mqtt             mosquitto_pub -h 127.0.0.1 -p 1883             -t m4/fh2/ci -m '{"ci":true}'
+          docker compose exec -T mqtt sh -c 'mosquitto_pub -h 127.0.0.1 -p 1883 -u "$MQTT_HEALTH_USERNAME" -P "$MQTT_HEALTH_PASSWORD" -t m4/fh2/ci -m '"'"'{"ci":true}'"'"''
           for i in {1..20}; do
             if curl --fail --silent http://127.0.0.1:8080/api/v1/events?limit=20 | grep -q '"ci":true'; then
               exit 0

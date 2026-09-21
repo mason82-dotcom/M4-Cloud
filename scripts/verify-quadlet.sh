@@ -40,6 +40,10 @@ echo "Systemstatus:"
 curl --fail --silent "$base_url/api/v1/system/status"
 echo
 
+echo "DJI Cloud API Status:"
+curl --fail --silent "$base_url/api/v1/dji/cloud/status"
+echo
+
 echo "FH2-Status:"
 curl --fail --silent "$base_url/api/v1/fh2/status"
 echo
@@ -52,7 +56,10 @@ for route in \
   "/api/v1/fh2/waylines" \
   "/api/v1/fh2/flight-tasks" \
   "/api/v1/cameras/status" \
-  "/api/v1/cameras/paths"
+  "/api/v1/cameras/paths" \
+  "/api/v1/cameras/telemetry" \
+  "/api/v1/dji/cloud/status" \
+  "/api/v1/dji/cloud/bootstrap"
 do
   if ! grep -Fq "$route" <<<"$openapi_json"; then
     echo "FH2-V2-Route fehlt im OpenAPI-Schema: $route" >&2
@@ -61,7 +68,15 @@ do
   echo "  $route: OK"
 done
 
-marker="quadlet-verify-$(date +%s)-$$"
+echo "MQTT-Authentifizierungstest:"
+if podman exec m4-mqtt mosquitto_pub -h 127.0.0.1 -p 1883 -t m4/health -m anonymous-must-fail >/dev/null 2>&1; then
+  echo "Fehler: anonymer MQTT-Zugriff wurde akzeptiert." >&2
+  exit 1
+fi
+podman exec m4-mqtt sh -c 'mosquitto_pub -h 127.0.0.1 -p 1883 -u "$MQTT_HEALTH_USERNAME" -P "$MQTT_HEALTH_PASSWORD" -t m4/health -m authenticated'
+echo "Anonym abgewiesen, authentifiziert akzeptiert: OK"
+
+marker="quadlet-verify-$(date +%s)-$"
 
 echo "HTTP-Persistenztest:"
 curl --fail --silent   -H 'Content-Type: application/json'   -d "{\"source\":\"quadlet-verify-http\",\"topic\":\"verify/http\",\"payload\":{\"marker\":\"$marker-http\"}}"   "$base_url/api/v1/events"
@@ -75,7 +90,7 @@ fi
 echo "HTTP -> PostgreSQL: OK"
 
 echo "MQTT-Persistenztest:"
-podman exec m4-mqtt mosquitto_pub   -h 127.0.0.1   -p 1883   -q 1   -t m4/fh2/verify   -m "{\"marker\":\"$marker-mqtt\"}"
+podman exec m4-mqtt sh -c 'mosquitto_pub -h 127.0.0.1 -p 1883 -u "$MQTT_HEALTH_USERNAME" -P "$MQTT_HEALTH_PASSWORD" -q 1 -t m4/fh2/verify -m '"'"'{"marker":"'"$marker-mqtt"'"}'"'"''
 
 attempt=0
 while true; do
