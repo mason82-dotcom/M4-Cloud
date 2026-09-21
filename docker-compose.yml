@@ -79,7 +79,7 @@ services:
     env_file:
       - .env
     environment:
-      DATABASE_URL: ${DATABASE_URL:-postgresql://m4:change-me@postgres:5432/m4}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-m4}:${POSTGRES_PASSWORD:-change-me}@postgres:5432/${POSTGRES_DB:-m4}
       MQTT_HOST: mqtt
       MQTT_PORT: "1883"
       MQTT_PUBLIC_HOST: ${MQTT_PUBLIC_HOST:-127.0.0.1}
