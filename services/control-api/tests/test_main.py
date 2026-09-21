@@ -2,6 +2,7 @@ from fastapi.testclient import TestClient
 
 from app import main
 from app.config import Settings
+from app.cloud_api import CameraPath
 
 
 client = TestClient(main.app)
@@ -156,3 +157,64 @@ def test_fh2_waylines_configuration_error_is_503(monkeypatch) -> None:
     assert response.status_code == 503
     assert response.json()["detail"]["error"] == "fh2_not_configured"
     assert "secret-token" not in response.text
+
+
+def test_camera_status_does_not_expose_cloud_api_secrets(monkeypatch) -> None:
+    monkeypatch.setenv("DJI_CLOUD_API_BASE_URL", "https://cloud.example.local")
+    monkeypatch.setenv("DJI_CLOUD_API_TOKEN", "camera-secret-token")
+
+    response = client.get("/api/v1/cameras/status")
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "configured": True,
+        "source": "dji-cloud-api-live-capacity",
+        "endpoint": "/manage/api/v1/live/capacity",
+        "read_only": True,
+        "lyrebird": False,
+    }
+    assert "camera-secret-token" not in response.text
+    assert "cloud.example.local" not in response.text
+
+
+def test_camera_paths_route_returns_normalized_paths(monkeypatch) -> None:
+    monkeypatch.setenv("DJI_CLOUD_API_BASE_URL", "https://cloud.example.local")
+    monkeypatch.setenv("DJI_CLOUD_API_TOKEN", "camera-secret-token")
+
+    async def fake_get_camera_paths(self):
+        return [
+            CameraPath(
+                device_sn="1581ABC",
+                device_name="Mavic 3T",
+                camera_name="Mavic 3T",
+                camera_index="67-0-0",
+                video_index="normal-0",
+                video_type="normal",
+                switchable_video_types=("wide", "zoom", "ir"),
+                video_id="1581ABC/67-0-0/normal-0",
+            )
+        ]
+
+    monkeypatch.setattr(main.DJICloudAPIClient, "get_camera_paths", fake_get_camera_paths)
+
+    response = client.get("/api/v1/cameras/paths")
+
+    assert response.status_code == 200
+    assert response.json()["count"] == 1
+    assert response.json()["paths"][0]["video_id"] == "1581ABC/67-0-0/normal-0"
+    assert response.json()["paths"][0]["switchable_video_types"] == [
+        "wide",
+        "zoom",
+        "ir",
+    ]
+    assert "camera-secret-token" not in response.text
+
+
+def test_camera_paths_requires_cloud_api_configuration(monkeypatch) -> None:
+    monkeypatch.delenv("DJI_CLOUD_API_BASE_URL", raising=False)
+    monkeypatch.delenv("DJI_CLOUD_API_TOKEN", raising=False)
+
+    response = client.get("/api/v1/cameras/paths")
+
+    assert response.status_code == 503
+    assert response.json()["detail"]["error"] == "dji_cloud_api_not_configured"
