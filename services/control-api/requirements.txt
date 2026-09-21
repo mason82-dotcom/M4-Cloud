@@ -1,2 +1,6 @@
 fastapi==0.115.12
+httpx==0.28.1
+paho-mqtt==2.1.0
+prometheus-client==0.22.1
+psycopg[binary]==3.2.9
 uvicorn==0.34.3
