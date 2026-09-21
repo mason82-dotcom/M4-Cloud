@@ -73,6 +73,14 @@ case "$cmd" in
   camera-paths)
     curl_json "$base_url/api/v1/cameras/paths"
     ;;
+  camera-telemetry)
+    limit="${2:-200}"
+    if [[ ! "$limit" =~ ^[0-9]+$ ]] || (( limit < 1 || limit > 500 )); then
+      echo "Limit muss zwischen 1 und 500 liegen." >&2
+      exit 2
+    fi
+    curl_json "$base_url/api/v1/cameras/telemetry?limit=$limit"
+    ;;
   fh2-status)
     curl_json "$base_url/api/v1/fh2/status"
     ;;
@@ -140,9 +148,10 @@ Autostart:
   scripts/m4-manager.sh enable
   scripts/m4-manager.sh disable
 
-DJI Kameraerkennung (read-only):
+DJI Kamera-/Gimbal-Daten (read-only):
   scripts/m4-manager.sh camera-status
   scripts/m4-manager.sh camera-paths
+  scripts/m4-manager.sh camera-telemetry [LIMIT]
 
 DJI FlightHub 2 OpenAPI V2 (read-only):
   scripts/m4-manager.sh fh2-status
