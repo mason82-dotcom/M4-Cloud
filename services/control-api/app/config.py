@@ -20,6 +20,7 @@ class Settings(BaseSettings):
     mqtt_port: int = 1883
     mqtt_public_host: str = "127.0.0.1"
     mqtt_public_port: int = 1883
+    mqtt_public_tls: bool = False
     mqtt_service_username: str = "m4-service"
     mqtt_service_password: str = Field(default="change-me-mqtt", repr=False)
     dji_mqtt_username: str = "dji-client"
