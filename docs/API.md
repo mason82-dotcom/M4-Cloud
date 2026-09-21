@@ -45,6 +45,41 @@ Read-only Task-Liste. Optional: `flight_task_status` und mehrfaches `sn`.
 
 Details und DJI-Upstream-Pfade: `docs/FH2-OPENAPI-V2.md`.
 
+## DJI Kamera-/Videopfad-Erkennung
+
+### `GET /api/v1/cameras/status`
+
+Zeigt ausschließlich nicht-sensitive Konfigurationsinformationen zur
+Kameraerkennung. Die Cloud-API-Basis-URL und der Token werden nicht ausgegeben.
+
+### `GET /api/v1/cameras/paths`
+
+Liest die aktuell verfügbaren Kamera-/Videopfade read-only aus der offiziellen
+DJI-Cloud-API-Capacity-Ressource:
+
+```http
+GET /manage/api/v1/live/capacity
+x-auth-token: <access_token>
+```
+
+M4 normalisiert daraus unter anderem:
+
+- `device_sn`
+- `camera_index`
+- `video_index`
+- `video_type`
+- `switchable_video_types`
+- `video_id`
+
+Beispiel für die von DJI verwendete Video-ID-Struktur:
+
+```text
+<drone-sn>/<payload-index>/<video-index>
+1581ABC/67-0-0/normal-0
+```
+
+Details: `docs/CAMERA-PATHS.md`.
+
 ## Ereignisse
 
 ### `POST /api/v1/events`
