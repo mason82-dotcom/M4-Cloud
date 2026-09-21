@@ -1,3 +1,30 @@
+# Referenz-ACL. Im Compose-Betrieb wird die aktive ACL beim Start unter
+# /mosquitto/data/acl aus den konfigurierten Benutzern erzeugt.
+
 user m4-service
 topic readwrite m4/#
 topic read $SYS/#
+topic read sys/product/+/status
+topic read thing/product/+/state
+topic read thing/product/+/osd
+topic read thing/product/+/requests
+topic read thing/product/+/events
+topic read thing/product/+/services_reply
+topic read thing/product/+/property/set_reply
+topic write thing/product/+/services
+topic write thing/product/+/property/set
+
+user dji-client
+topic write sys/product/+/status
+topic write thing/product/+/state
+topic write thing/product/+/osd
+topic write thing/product/+/requests
+topic write thing/product/+/events
+topic write thing/product/+/services_reply
+topic write thing/product/+/property/set_reply
+topic read thing/product/+/services
+topic read thing/product/+/property/set
+
+# DRC absichtlich nicht freigegeben:
+# thing/product/+/drc/up
+# thing/product/+/drc/down
