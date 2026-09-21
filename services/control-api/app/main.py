@@ -1,45 +1,26 @@
 from __future__ import annotations
 
-import os
-import socket
-from dataclasses import dataclass
+from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Response, status
+from fastapi import FastAPI, HTTPException, Response, WebSocket, WebSocketDisconnect, status
+from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 
-APP_NAME = "M4-Cloud Control API"
-APP_VERSION = "1.0.0"
-
-
-@dataclass(frozen=True)
-class Settings:
-    postgres_host: str
-    postgres_port: int
-    mqtt_host: str
-    mqtt_port: int
-    fh2_upstream_base_url: str
-    fh2_upstream_verify_tls: bool
-
-    @classmethod
-    def from_env(cls) -> "Settings":
-        return cls(
-            postgres_host=os.getenv("POSTGRES_HOST", "postgres"),
-            postgres_port=int(os.getenv("POSTGRES_PORT", "5432")),
-            mqtt_host=os.getenv("MQTT_HOST", "mqtt"),
-            mqtt_port=int(os.getenv("MQTT_PORT", "1883")),
-            fh2_upstream_base_url=os.getenv("FH2_UPSTREAM_BASE_URL", "").strip(),
-            fh2_upstream_verify_tls=os.getenv(
-                "FH2_UPSTREAM_VERIFY_TLS", "true"
-            ).lower()
-            in {"1", "true", "yes", "on"},
-        )
+from .config import APP_NAME, APP_VERSION, Settings
+from .db import (
+    database_reachable,
+    ensure_schema,
+    get_worker_heartbeat,
+    recent_events,
+    store_event,
+)
+from .fh2 import FH2Client
+from .models import EventIn
 
 
-def tcp_reachable(host: str, port: int, timeout: float = 1.0) -> bool:
-    try:
-        with socket.create_connection((host, port), timeout=timeout):
-            return True
-    except OSError:
-        return False
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    ensure_schema()
+    yield
 
 
 app = FastAPI(
@@ -47,6 +28,7 @@ app = FastAPI(
     version=APP_VERSION,
     docs_url="/api/docs",
     openapi_url="/api/openapi.json",
+    lifespan=lifespan,
 )
 
 
@@ -58,14 +40,19 @@ def health() -> dict[str, str]:
 @app.get("/ready")
 def ready(response: Response) -> dict[str, object]:
     settings = Settings.from_env()
+    postgres_ok = database_reachable()
+    mqtt_ok = settings.mqtt_reachable()
+    worker = get_worker_heartbeat()
+    worker_ok = bool(worker and worker["fresh"])
+
     dependencies = {
-        "postgres": tcp_reachable(settings.postgres_host, settings.postgres_port),
-        "mqtt": tcp_reachable(settings.mqtt_host, settings.mqtt_port),
+        "postgres": postgres_ok,
+        "mqtt": mqtt_ok,
+        "integration_worker": worker_ok,
     }
     is_ready = all(dependencies.values())
     if not is_ready:
         response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
-
     return {"ready": is_ready, "dependencies": dependencies}
 
 
@@ -76,12 +63,68 @@ def system_status() -> dict[str, object]:
         "service": "m4-cloud",
         "version": APP_VERSION,
         "fh2_upstream": {
-            "configured": bool(settings.fh2_upstream_base_url),
+            "configured": settings.fh2_configured,
             "verify_tls": settings.fh2_upstream_verify_tls,
         },
         "integration": {
             "mqtt": {"host": settings.mqtt_host, "port": settings.mqtt_port},
             "https": True,
-            "websocket_proxy": True,
+            "websocket": True,
+            "event_persistence": True,
+            "metrics": True,
         },
     }
+
+
+@app.get("/api/v1/fh2/status")
+async def fh2_status() -> dict[str, object]:
+    settings = Settings.from_env()
+    if not settings.fh2_configured:
+        return {"configured": False, "reachable": False, "reason": "not_configured"}
+
+    probe = await FH2Client(settings).probe()
+    return {
+        "configured": True,
+        "reachable": probe.reachable,
+        "http_status": probe.http_status,
+        "reason": probe.reason,
+    }
+
+
+@app.post("/api/v1/events", status_code=status.HTTP_202_ACCEPTED)
+def ingest_event(event: EventIn) -> dict[str, object]:
+    event_id = store_event(
+        source=event.source,
+        topic=event.topic,
+        payload=event.payload,
+    )
+    return {"accepted": True, "id": event_id}
+
+
+@app.get("/api/v1/events")
+def list_events(limit: int = 100) -> dict[str, object]:
+    if limit < 1 or limit > 500:
+        raise HTTPException(status_code=400, detail="limit must be between 1 and 500")
+    return {"events": recent_events(limit)}
+
+
+@app.websocket("/ws/events")
+async def websocket_events(websocket: WebSocket) -> None:
+    await websocket.accept()
+    try:
+        while True:
+            command = await websocket.receive_text()
+            if command not in {"latest", "ping"}:
+                await websocket.send_json({"error": "unsupported_command"})
+                continue
+            if command == "ping":
+                await websocket.send_json({"type": "pong"})
+            else:
+                await websocket.send_json({"type": "events", "events": recent_events(50)})
+    except WebSocketDisconnect:
+        return
+
+
+@app.get("/metrics", include_in_schema=False)
+def metrics() -> Response:
+    return Response(content=generate_latest(), media_type=CONTENT_TYPE_LATEST)
