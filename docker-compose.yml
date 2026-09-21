@@ -71,7 +71,7 @@ services:
       - postgres-data:/var/lib/postgresql/data
       - ./infra/postgres/init.sql:/docker-entrypoint-initdb.d/001-init.sql:ro
     healthcheck:
-      test: ["CMD-SHELL", "PGPASSWORD=\"${POSTGRES_PASSWORD}\" psql -h 127.0.0.1 -U \"${POSTGRES_USER}\" -d \"${POSTGRES_DB}\" -tAc 'SELECT 1' | grep -q 1"]
+      test: ["CMD-SHELL", "PGPASSWORD=\"${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}\" psql -h 127.0.0.1 -U \"${POSTGRES_USER:-m4cloud}\" -d \"${POSTGRES_DB:-m4cloud}\" -tAc 'SELECT 1' | grep -q 1"]
       interval: 10s
       timeout: 5s
       retries: 5
