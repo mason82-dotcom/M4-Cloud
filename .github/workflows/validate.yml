@@ -1,10 +1,10 @@
 name: Direktor - Validate
 
 on:
-  push:
-    branches: [main]
-  pull_request:
-    branches: [main]
+  workflow_dispatch:
+
+# Die zentrale CI wird ausschließlich vom Direktor manuell gestartet.
+# Manager, RC Pro und Multispektral triggern keine CI-Läufe.
 
 jobs:
   control-api:
