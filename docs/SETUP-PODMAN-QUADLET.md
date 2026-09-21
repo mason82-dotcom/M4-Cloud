@@ -1,17 +1,25 @@
 # Podman + Quadlet unter WSL2
 
-Dieser Pfad ergänzt den bestehenden Docker-Compose-Referenzbetrieb. Er ersetzt ihn nicht, solange der vollständige M4-Stack noch nicht mit Quadlet abgenommen wurde.
+Dieser Pfad ergänzt den bestehenden Docker-Compose-Referenzbetrieb. Der Compose-Pfad bleibt die V1-Referenz, bis die Quadlet-Variante vollständig lokal und in CI abgenommen wurde.
 
-## 1. Voraussetzungen prüfen
+## 1. Voraussetzungen
 
 ```bash
 cat /etc/os-release
 ps -p 1 -o comm=
+podman --version
+podman info --format '{{.Host.CgroupsVersion}}'
+podman info --format '{{.Host.Security.Rootless}}'
 ```
 
-Für Quadlet muss `systemd` als PID 1 laufen.
+Erwartet:
 
-Falls nicht:
+- `systemd` als PID 1
+- Podman 5.x
+- cgroup `v2`
+- rootless `true`
+
+Falls systemd unter WSL2 nicht aktiv ist:
 
 ```bash
 sudo tee /etc/wsl.conf >/dev/null <<'EOF'
@@ -26,50 +34,29 @@ Danach in PowerShell:
 wsl --shutdown
 ```
 
-## 2. Podman installieren
-
-Unter Ubuntu:
+## 2. Pakete
 
 ```bash
 sudo apt update
 sudo apt install -y podman uidmap fuse-overlayfs slirp4netns
 ```
 
-Prüfen:
-
-```bash
-podman --version
-podman info --format '{{.Host.CgroupsVersion}}'
-podman info --format '{{.Host.Security.Rootless}}'
-```
-
-Erwartet:
-
-- cgroup v2
-- rootless = true, wenn Podman als normaler Benutzer gestartet wird
-
-## 3. Registry-/Netzwerktest
+Registry-Test:
 
 ```bash
 podman run --rm docker.io/library/hello-world
 ```
 
-Falls der Abruf scheitert, zuerst IPv4 testen:
+Die Warnung `"/" is not a shared mount` ist unter WSL2/rootless zunächst kein Abbruchgrund. Für die von M4 verwendeten normalen Bind-Mounts wird die Mount-Propagation nicht global verändert, solange kein konkreter Mountfehler auftritt.
 
-```bash
-curl -4 -I https://registry-1.docker.io/v2/
-```
-
-HTTP 401 ist bei diesem Registry-Test erwartbar und zeigt, dass die Verbindung funktioniert.
-
-## 4. Rootless-Zuordnungen prüfen
+## 3. Rootless-Zuordnungen
 
 ```bash
 grep "^$USER:" /etc/subuid
 grep "^$USER:" /etc/subgid
 ```
 
-Falls keine Einträge vorhanden sind:
+Falls beide fehlen:
 
 ```bash
 sudo usermod --add-subuids 100000-165535 "$USER"
@@ -78,27 +65,20 @@ sudo usermod --add-subgids 100000-165535 "$USER"
 
 Danach WSL neu starten.
 
-## 5. Quadlet-Benutzerpfad
+## 4. Repository
 
-```bash
-mkdir -p ~/.config/containers/systemd
-systemctl --user daemon-reload
-```
-
-Rootless Quadlet-Dateien werden dort als Benutzer-Units verarbeitet.
-
-## 6. VS Code
-
-Repository aus Ubuntu öffnen:
+Empfohlen ist der Linux-Checkout:
 
 ```bash
 cd ~/src/M4-Cloud
-code .
+git fetch --all --prune
+git switch agent/podman-quadlet
+git pull --ff-only
 ```
 
-Empfohlene Erweiterungen sind in `.vscode/extensions.json` hinterlegt.
+Nicht den aktiven Linux-Entwicklungsbetrieb unter `/mnt/c` oder `/mnt/d` führen.
 
-## 7. M4-Konfiguration
+## 5. M4-Konfiguration
 
 ```bash
 cd ~/src/M4-Cloud
@@ -107,31 +87,149 @@ chmod 600 .env
 nano .env
 ```
 
-Mindestens `POSTGRES_PASSWORD` auf ein eigenes Passwort setzen.
+Mindestens:
 
-## 8. Architektur
+```env
+POSTGRES_PASSWORD=ein-langes-eigenes-passwort
+```
 
-Der bestehende Pfad bleibt:
+Das Installationsskript kopiert die Runtime-Umgebung mit Modus 600 nach `~/.config/m4-cloud/m4.env`. Die Projektdatei `.env` bleibt Git-ignoriert.
+
+## 6. Quadlet installieren
+
+```bash
+./scripts/m4-manager.sh install
+```
+
+Dabei werden:
+
+1. Konfigurationsdateien nach `~/.config/m4-cloud/assets` kopiert.
+2. die Control-API als `localhost/m4-control-api:current` gebaut.
+3. die Quadlets aus `infra/quadlet/` rootless installiert.
+4. `m4-cloud.target` als User-systemd-Target installiert.
+5. der User-systemd-Manager neu geladen.
+
+Für Podman 5.7 wird bewusst die kompatible Verzeichnisinstallation `podman quadlet install --replace <verzeichnis>` verwendet.
+
+## 7. M4 Manager
+
+Start:
+
+```bash
+./scripts/m4-manager.sh start
+```
+
+Status:
+
+```bash
+./scripts/m4-manager.sh status
+```
+
+Abnahme:
+
+```bash
+./scripts/m4-manager.sh verify
+```
+
+Logs:
+
+```bash
+./scripts/m4-manager.sh logs
+```
+
+Stop:
+
+```bash
+./scripts/m4-manager.sh stop
+```
+
+Optional Prometheus:
+
+```bash
+./scripts/m4-manager.sh monitoring-start
+./scripts/m4-manager.sh monitoring-status
+./scripts/m4-manager.sh monitoring-stop
+```
+
+Autostart im User-systemd-Manager:
+
+```bash
+./scripts/m4-manager.sh enable
+```
+
+Für Start ohne aktive Benutzeranmeldung kann zusätzlich `loginctl enable-linger "$USER"` aktiviert werden.
+
+## 8. Dienste
+
+| Unit | Container | Zweck |
+| --- | --- | --- |
+| `postgres.service` | `m4-postgres` | PostgreSQL |
+| `mqtt.service` | `m4-mqtt` | MQTT |
+| `control-api.service` | `m4-control-api` | FastAPI Control API |
+| `integration-worker.service` | `m4-integration-worker` | MQTT Worker |
+| `reverse-proxy.service` | `m4-reverse-proxy` | Nginx / HTTP |
+| `prometheus.service` | `m4-prometheus` | optionales Monitoring |
+
+PostgreSQL, MQTT, Control API und Nginx verwenden Healthchecks. `Notify=healthy` sorgt dafür, dass abhängige systemd-Units erst weiterstarten, wenn der jeweilige Container gesund ist.
+
+## 9. Ports
+
+Der erste Quadlet-Pfad verwendet die V1-Standardports:
+
+- HTTP: `0.0.0.0:8080`
+- MQTT: `127.0.0.1:1883`
+- Prometheus: `127.0.0.1:9090`
+
+Die Compose-Variablen `M4_HTTP_PORT`, `M4_MQTT_PORT` und `PROMETHEUS_PORT` gelten aktuell nur für den Compose-Pfad. Dynamische Quadlet-Port-Overrides werden erst ergänzt, wenn der Basispfad vollständig abgenommen ist.
+
+## 10. VS Code
+
+Aus Ubuntu:
+
+```bash
+cd ~/src/M4-Cloud
+code .
+```
+
+Empfohlene Erweiterungen stehen in `.vscode/extensions.json`.
+
+Zusätzlich stehen Tasks zur Verfügung:
+
+- `M4: Podman installieren/aktualisieren`
+- `M4: Start`
+- `M4: Stop`
+- `M4: Status`
+- `M4: Abnahme`
+- `M4: Logs`
+- `M4: Monitoring starten`
+
+Aufruf über **Terminal -> Run Task** bzw. **Tasks: Run Task**.
+
+## 11. Architektur
 
 ```text
 docker-compose.yml
   = getestete V1-Referenz
-```
 
-Der neue Pfad wird separat aufgebaut:
-
-```text
 infra/quadlet/
   m4.network
-  postgres.volume
-  mqtt.volume
-  prometheus.volume
+  postgres-data.volume
+  mqtt-data.volume
+  prometheus-data.volume
   postgres.container
   mqtt.container
   control-api.container
   integration-worker.container
   reverse-proxy.container
   prometheus.container
+
+infra/systemd/
+  m4-cloud.target
+
+scripts/
+  quadlet-install.sh
+  m4-manager.sh
+  verify-quadlet.sh
 ```
 
-Erst nach vollständiger Abnahme wird dieser Pfad als gleichwertige Runtime dokumentiert.
+Der Quadlet-Pfad bleibt getrennt vom Compose-Pfad, sodass beide Varianten unabhängig getestet und zurückgerollt werden können.
