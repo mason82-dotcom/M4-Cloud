@@ -106,11 +106,14 @@ Dynamische Kamera-/Videopfad-Erkennung aus der DJI Cloud API:
 ```bash
 ./scripts/m4-manager.sh camera-status
 ./scripts/m4-manager.sh camera-paths
+./scripts/m4-manager.sh camera-telemetry
 ```
 
 M4 liest dafür read-only `/manage/api/v1/live/capacity` ein und normalisiert
-die gemeldeten `video_id`-/Payload-Pfade. Lyrebird wird dafür nicht benötigt.
-Details: `docs/CAMERA-PATHS.md`.
+die gemeldeten `video_id`-/Payload-Pfade. Zusätzlich kann
+`camera-telemetry` bereits persistierte DJI-MQTT-Kamera- und Gimbalwerte pro
+`device_sn + payload_index` zusammenführen. Lyrebird wird dafür nicht
+benötigt. Details: `docs/CAMERA-PATHS.md`.
 
 Für MQTT werden die offiziell für die Zielinstallation vorgesehenen Topics
 über `DJI_MQTT_TOPICS` gesetzt.
