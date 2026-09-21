@@ -17,9 +17,22 @@ class CameraCapability(BaseModel):
     multispectral: bool = False
 
 
+class CameraPath(BaseModel):
+    source: IntegrationSource = IntegrationSource.DJI_CLOUD_API
+    device_sn: str
+    device_name: str | None = None
+    camera_name: str | None = None
+    payload_index: str
+    video_index: str
+    video_type: str
+    switchable_video_types: list[str] = Field(default_factory=list)
+    video_id: str
+    fallback_video_index: bool = False
+
+
 class CameraState(BaseModel):
     source: IntegrationSource
-    payload_index: int = 0
+    payload_index: str | None = None
     lens_index: int | None = None
     mode: str | None = None
     live_source: str | None = None
@@ -33,7 +46,7 @@ class CameraState(BaseModel):
 
 class GimbalState(BaseModel):
     source: IntegrationSource
-    payload_index: int = 0
+    payload_index: str | None = None
     pitch_deg: float | None = None
     roll_deg: float | None = None
     yaw_deg: float | None = None
