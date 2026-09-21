@@ -22,6 +22,18 @@ M4-Cloud V1.1 stellt die vollständige eigene Integrations- und Betriebsschicht 
 - Backup-/Restore-Runbook
 - CI-End-to-End-Abnahme
 
+## Arbeitsmodell
+
+Neue M4-Features werden vom **Manager** geliefert und direkt in `main`
+integriert. **RC Pro** unterstützt bei DJI-Controller-, Mobile-SDK- und
+Geräteintegration; **Multispektral** unterstützt bei Kamera-, Medien-,
+Mapping- und multispektralen Datenpfaden.
+
+Der Manager führt beide Fachbeiträge zusammen, hält Backend, Deployment,
+Tests und Dokumentation konsistent und ist die zentrale Integrationsstelle.
+
+Ausführlich: `docs/PROJECT-WORKFLOW.md`.
+
 ## Schnellstart
 
 ```bash
