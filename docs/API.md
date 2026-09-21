@@ -78,6 +78,42 @@ Beispiel für die von DJI verwendete Video-ID-Struktur:
 1581ABC/67-0-0/normal-0
 ```
 
+### `GET /api/v1/cameras/telemetry`
+
+Liest die zuletzt persistierten DJI-MQTT-Ereignisse und bildet daraus einen
+read-only Snapshot pro `device_sn + payload_index`.
+
+Parameter:
+
+- `limit`: Anzahl der jüngsten Persistenzereignisse, Standard `200`, Bereich
+  `1..500`
+
+Ausgewertet werden DJI-Topics der Form:
+
+```text
+thing/product/<device_sn>/osd
+thing/product/<device_sn>/state
+```
+
+Wenn entsprechende Telemetrie bereits persistiert wurde, akzeptiert der
+Normalizer außerdem Gimbalwerte aus `drc`-Payloads. Dadurch wird **kein DRC
+aktiviert** und es werden keine Steuerbefehle gesendet.
+
+Die Antwort enthält je Payload unter anderem:
+
+- `device_sn`
+- `payload_index`
+- `camera` mit den tatsächlich gemeldeten Kamera-/Belichtungs-/Zoomwerten
+- `gimbal.gimbal_pitch`
+- `gimbal.gimbal_roll`
+- `gimbal.gimbal_yaw`
+- `source_topic`
+- `timestamp_ms`
+
+Fehlt bei einem Gimbal-Snapshot die eindeutige Payload-Zuordnung, bleibt
+`payload_index: null`. M4 errät keine Zuordnung anhand von Modell- oder
+Kameranamen.
+
 Details: `docs/CAMERA-PATHS.md`.
 
 ## Ereignisse
