@@ -11,7 +11,7 @@ Der kanonische Entwicklungs- und Zielbranch ist `main`.
 - **RC Pro**: RC-/MSDK-nahe Beiträge.
 - **Multispektral**: Kamera-, Payload- und Multispektral-Mappings.
 
-Nur der Direktor verändert CI-Konfiguration.
+Nur der Direktor verändert CI-Konfiguration, startet CI-Läufe und bewertet deren Ergebnis. Manager, RC Pro und Multispektral liefern ausschließlich Code, lokale Tests und Prüfanweisungen zu.
 
 ## Ausgeschlossen
 
