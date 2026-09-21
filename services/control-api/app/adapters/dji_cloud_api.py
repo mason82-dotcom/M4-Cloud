@@ -49,12 +49,17 @@ class DJICloudAPIAdapter:
     def mqtt_username(self) -> str:
         return self.settings.dji_mqtt_username
 
+    @property
+    def mqtt_tls_enabled(self) -> bool:
+        return self.settings.mqtt_public_tls
+
     def bootstrap_descriptor(self) -> dict[str, object]:
         return {
             "mqtt": {
                 "host": self.settings.mqtt_public_host,
                 "port": self.settings.mqtt_public_port,
                 "username": self.settings.dji_mqtt_username,
+                "tls": self.settings.mqtt_public_tls,
                 "password_in_response": False,
             },
             "topics": {
