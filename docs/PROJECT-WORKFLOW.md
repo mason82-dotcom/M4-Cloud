@@ -166,6 +166,25 @@ Beispiele:
 DANGEROUS-Funktionen werden niemals implizit freigeschaltet und benötigen eine
 eigene Schutz- und Freigabelogik.
 
+## Temporär deaktivierte Integrationspfade
+
+### Lyrebird
+
+Lyrebird ist bis auf Weiteres **deaktiviert** und wird nicht als Bestandteil
+des aktuellen M4-Integrationspfads verwendet.
+
+Das bedeutet:
+
+- keine neue M4-Funktion darf Lyrebird voraussetzen
+- RC Pro verwendet für neue M4-Arbeit primär offizielle DJI-Schnittstellen,
+  dokumentierte Cloud-API-/Mobile-SDK-Pfade und direkte Hardwareverifikation
+- Multispektral baut keine Kamera-/Media-Pipeline auf Lyrebird auf
+- der Manager integriert keine Lyrebird-spezifischen Abhängigkeiten in `main`
+- vorhandene externe Lyrebird-Arbeit bleibt davon unberührt und wird nicht
+  automatisch gelöscht
+
+Eine Reaktivierung erfolgt nur auf ausdrückliche Anweisung.
+
 ## Verantwortung bei Konflikten
 
 Wenn RC Pro und Multispektral unterschiedliche technische Anforderungen
