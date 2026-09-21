@@ -6,6 +6,7 @@ on:
       - main
       - agent/fh2-onprem-control
       - agent/fullstack-integration
+      - agent/fh2-openapi-v2
   pull_request:
     branches:
       - main
