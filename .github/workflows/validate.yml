@@ -1,16 +1,10 @@
-name: V1 Validation
+name: Director Validation
 
 on:
-  push:
-    branches:
-      - main
-      - agent/fh2-onprem-control
-      - agent/fullstack-integration
-      - agent/fh2-openapi-v2
-  pull_request:
-    branches:
-      - main
-      - agent/fullstack-integration
+  workflow_dispatch:
+
+# CI is owned and started manually by the Director.
+# Manager, RC Pro and Multispektral do not trigger CI.
 
 permissions:
   contents: read
