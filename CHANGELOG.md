@@ -1,5 +1,18 @@
 # Changelog
 
+## Unreleased
+
+### DJI Kameraerkennung
+
+- Kamera-/Videopfade dynamisch über DJI Cloud API `GET /manage/api/v1/live/capacity`
+- Authentifizierung über `x-auth-token`
+- Normalisierung von Payload-/Kamera-/Videopfaden zu `video_id`
+- Unterstützung für snake_case- und CamelCase-Antwortmodelle
+- Manager-Kommandos `camera-status` und `camera-paths`
+- Lyrebird ist für die Kameraerkennung nicht erforderlich
+- Funktion bleibt read-only; keine Stream-/Kamerasteuerung
+
+
 ## 1.1.0
 
 ### Deployment und Entwicklung
