@@ -50,7 +50,9 @@ for route in \
   "/api/v1/fh2/devices" \
   "/api/v1/fh2/hms" \
   "/api/v1/fh2/waylines" \
-  "/api/v1/fh2/flight-tasks"
+  "/api/v1/fh2/flight-tasks" \
+  "/api/v1/cameras/status" \
+  "/api/v1/cameras/paths"
 do
   if ! grep -Fq "$route" <<<"$openapi_json"; then
     echo "FH2-V2-Route fehlt im OpenAPI-Schema: $route" >&2
