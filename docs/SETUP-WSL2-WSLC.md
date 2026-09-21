@@ -278,12 +278,12 @@ git status
 Für Entwicklungsarbeiten nicht direkt auf `main` committen. Der FH2-Arbeitsbranch ist:
 
 ```bash
-git switch agent/fh2-onprem-control
+git switch main
 git pull --ff-only
 ```
 
 Der Direktor integriert geprüfte Änderungen über:
 
 ```text
-agent/fullstack-integration
+main
 ```
