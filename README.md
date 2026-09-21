@@ -35,11 +35,19 @@ curl http://localhost:8080/api/v1/system/status
 curl http://localhost:8080/api/v1/fh2/status
 ```
 
-Vollständige lokale Abnahme:
+Vollständige lokale Abnahme unter Linux/WSL2:
 
 ```bash
 sh scripts/verify.sh
 ```
+
+Unter Windows PowerShell:
+
+```powershell
+.\scripts\verify.ps1
+```
+
+Für WSL2 + Ubuntu + das neue Microsoft-WSLC siehe `docs/SETUP-WSL2-WSLC.md`.
 
 ## Dienste
 
@@ -77,4 +85,5 @@ Für MQTT werden die offiziell für die Zielinstallation vorgesehenen Topics
 - `docs/API.md` – Control API
 - `docs/NETWORK.md` – Ports und Netzwerk
 - `docs/OPERATIONS.md` – Betrieb, Monitoring, Backup und Restore
+- `docs/SETUP-WSL2-WSLC.md` – Windows 11, WSL2, Ubuntu, VS Code und WSLC
 - `SECURITY.md` – Sicherheitsvorgaben
