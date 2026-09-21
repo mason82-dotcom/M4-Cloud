@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+### DJI Cloud API Ingress und MQTT-Sicherheit
+
+- geschützter Pilot-2-Bootstrap-Endpunkt
+- direkte DJI-MQTT-Uplink-Klassifizierung
+- Mosquitto ohne Anonymous Login
+- getrennte Rollen für Worker, Health und Pilot
+- ACLs für DJI-Uplink/-Downlink; DRC bleibt gesperrt
+- lokale Secret-Erzeugung für Quadlet
+- Manager-Kommando `dji-cloud-status`
+- Kamera-/Gimbal-Telemetrie über `/api/v1/cameras/telemetry`
+- zentrale CI bleibt ausschließlich `workflow_dispatch` des Direktors
+
+
 ### DJI Kameraerkennung
 
 - Kamera-/Videopfade dynamisch über DJI Cloud API `GET /manage/api/v1/live/capacity`

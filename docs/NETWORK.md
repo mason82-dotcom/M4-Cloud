@@ -1,32 +1,33 @@
 # Netzwerk und Ports
 
-## Standardports
-
-| Port | Richtung | Zweck | Default-Bind |
+| Port | Richtung | Zweck | Default |
 | --- | --- | --- | --- |
-| 8080/TCP | LAN -> M4 | HTTP/API/WebSocket/Health | 0.0.0.0 |
-| 1883/TCP | Host -> MQTT | MQTT Bootstrap | 127.0.0.1 |
-| 9090/TCP | Host -> Prometheus | optionales Monitoring | 127.0.0.1 |
+| 8080/TCP | LAN -> M4 | HTTP/API/WebSocket | `0.0.0.0` |
+| 1883/TCP | Host -> MQTT | authentifiziertes internes MQTT | `127.0.0.1` |
+| 9090/TCP | Host -> Prometheus | Monitoring | `127.0.0.1` |
 | 5432/TCP | intern | PostgreSQL | nicht veröffentlicht |
 | 8000/TCP | intern | Control API | nicht veröffentlicht |
 
-`integration-worker` besitzt keinen Host-Port. Er konsumiert MQTT und schreibt
-in PostgreSQL.
+## MQTT
 
-## Sicherheitsvorgaben
+Aktuell:
 
-- PostgreSQL und Control API werden nicht auf den Host veröffentlicht.
-- MQTT ist im Bootstrap nur an Host-Loopback gebunden.
-- Prometheus ist nur an Host-Loopback gebunden.
-- Vor MQTT-LAN-Freigabe müssen Authentifizierung und TLS konfiguriert werden.
-- Keine Secrets im Git-Repository.
-- Externe FH2-Endpunkte werden ausschließlich über Umgebungsvariablen konfiguriert.
-- TLS-Verifikation zum FH2-Upstream ist standardmäßig aktiv.
-- Für eine Veröffentlichung außerhalb eines kontrollierten LANs muss TLS und
-  Authentifizierung am Reverse Proxy vorgeschaltet werden.
+- Anonymous deaktiviert
+- Passwortauthentifizierung aktiv
+- ACL aktiv
+- Host-Bind nur Loopback
+- kein externer TLS-Listener
 
-## DJI-Geräte / FH2
+Damit kann Pilot 2 derzeit nicht direkt über LAN produktiv auf den Broker zugreifen. Das ist beabsichtigt.
 
-DJI Pilot 2, DJI Dock oder ein offizieller FH2-Server dürfen nur auf Ports
-zugreifen, die für die tatsächlich verwendete offizielle Integrationsmethode
-benötigt werden. M4 öffnet keine angenommenen proprietären DJI-Ports.
+## HTTP
+
+Port 8080 ist aktuell HTTP. Für reale Pilot-2-H5-/Bootstrap-Nutzung ist HTTPS erforderlich.
+
+## FlightHub 2
+
+FH2 wird ausgehend per HTTPS angesprochen. Es werden keine proprietären DJI-Ports angenommen oder geöffnet.
+
+## Firewall
+
+Nur explizit benötigte Ports freigeben. Vor VLAN-/Internet-Freigabe: TLS, Authentifizierung, Quellnetzbegrenzung und Credential-Rotation.

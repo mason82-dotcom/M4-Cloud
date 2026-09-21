@@ -1,50 +1,97 @@
-# DJI FlightHub 2 Integration
+# DJI-Integration
 
-## Zweck
+## Grundsatz
 
-M4-Cloud ergänzt eine offiziell bereitgestellte DJI FlightHub 2
-On-Premises-/Privatization-Installation. Das Repository enthält keine
-proprietären FlightHub-2-Serverbinärdateien und bildet keine DJI-internen
-Dienste nach.
+M4-Cloud führt zwei DJI-Pfade zusammen, ohne sie technisch zu vermischen.
 
-## FH2 OpenAPI V2
+## 1. DJI Cloud API: Pilot 2 / Dock -> M4
 
-Die erste produktive FH2-HTTP-Integration orientiert sich an DJIs offiziellem
-Repository `dji-sdk/FlightHub-2-OpenAPI-V2-Demo`.
+Transporte:
 
-Konfiguration:
+- MQTT
+- HTTPS
+- WebSocket
+- JSBridge in Pilot 2 H5
 
-```env
-FH2_UPSTREAM_BASE_URL=https://fh2.example.local
-FH2_USER_TOKEN=...
-FH2_ORG_UUID=...
-FH2_PROJECT_UUID=...
-FH2_LANGUAGE=zh
-FH2_UPSTREAM_VERIFY_TLS=true
-FH2_TIMEOUT_SECONDS=15
+### MQTT-Uplinks
+
+```text
+thing/product/{device_sn}/osd
+thing/product/{device_sn}/state
+thing/product/{gateway_sn}/services_reply
+thing/product/{gateway_sn}/events
+thing/product/{gateway_sn}/requests
+thing/product/{gateway_sn}/property/set_reply
+sys/product/{gateway_sn}/status
 ```
+
+M4 klassifiziert diese Ereignisse als `dji-cloud-api`.
+
+DRC wird nicht abonniert/freigegeben.
+
+### MQTT-Downlinks, für Pilot lesbar
+
+```text
+thing/product/{gateway_sn}/services
+thing/product/{gateway_sn}/events_reply
+thing/product/{gateway_sn}/requests_reply
+thing/product/{gateway_sn}/property/set
+sys/product/{gateway_sn}/status_reply
+```
+
+Die Control API erzeugt aktuell keine Gerätekommandos.
+
+### Bootstrap
+
+```text
+GET /api/v1/dji/cloud/bootstrap
+X-M4-Bootstrap-Token: <DJI_BOOTSTRAP_TOKEN>
+```
+
+Der Endpoint ist M4-eigen und liefert die Parameter, die eine spätere H5-Seite an DJI Pilot 2/JSBridge weitergibt.
+
+Relevante spätere JSBridge-Funktionen:
+
+```text
+platformVerifyLicense(...)
+platformSetWorkspaceId(...)
+platformGetRemoteControllerSN()
+platformGetAircraftSN()
+platformLoadComponent(...)
+thingConnect(...)
+apiSetToken(...)
+wsConnect(...)
+```
+
+### Kamera-/Live-Capacity
+
+Read-only:
+
+```text
+GET /manage/api/v1/live/capacity
+x-auth-token: <access_token>
+```
+
+M4 bietet:
+
+```text
+GET /api/v1/cameras/status
+GET /api/v1/cameras/paths
+GET /api/v1/cameras/telemetry
+```
+
+Lyrebird ist dafür nicht erforderlich.
+
+## 2. FlightHub 2 Privatization OpenAPI V2: M4 -> FH2
 
 Authentifizierung:
 
 - `X-User-Token`
 - `X-Request-Id`
 - `X-Language`
-- projektbezogen zusätzlich `X-Project-Uuid`
+- projektbezogen `X-Project-Uuid`
 
-Der frühere M4-V1.0-Name `FH2_API_TOKEN` wird nur noch als
-Migrations-Fallback gelesen. Neue Installationen verwenden
-`FH2_USER_TOKEN`.
-
-## Read-only Ressourcen
-
-M4 implementiert derzeit ausschließlich dokumentierte GET-Operationen:
-
-- Geräte
-- HMS
-- Waylines
-- Flight Tasks
-
-M4-Control-API:
+Read-only M4-Routen:
 
 ```text
 GET /api/v1/fh2/status
@@ -54,42 +101,25 @@ GET /api/v1/fh2/waylines
 GET /api/v1/fh2/flight-tasks
 ```
 
-Ausführlich: `docs/FH2-OPENAPI-V2.md`.
+Details: `docs/FH2-OPENAPI-V2.md`.
 
-## Fehlerbehandlung
+## Nächste Cloud-API-Schritte
 
-DJI kann fachliche Fehler mit HTTP 200 und `code != 0` zurückgeben. M4
-behandelt solche Antworten als Upstream-Fehler und nicht als Erfolg.
+1. MQTT-TLS-Listener
+2. Pilot-2-H5-Einstieg
+3. License Verify
+4. Thing/API/WS-Module verbinden
+5. echte RC Pro Enterprise anbinden
+6. Device Topology
+7. Map/TSA
+8. Media/Wayline
+9. erst danach gezielte Write-Operationen
+10. DRC separat
 
-Secrets und die konkrete FH2-Upstream-URL werden nicht in Statusantworten
-ausgegeben.
+## Sicherheitsklassen
 
-## Sicherheitsgrenze
+- READ: aktuell zulässig
+- WRITE: separat absichern
+- DANGEROUS: explizite Schutz-/Freigabelogik erforderlich
 
-In dieser Phase existieren keine M4-Endpunkte zum:
-
-- Starten oder Erstellen von Flugaufgaben
-- Steuern von Luftfahrzeugen
-- RTH
-- Payload Control
-- Löschen von DJI-Daten
-- Starten kosten-/quota-relevanter Rekonstruktionen
-
-Spätere Operationen werden in `READ`, `WRITE` und `DANGEROUS` getrennt.
-
-## MQTT
-
-Der Worker abonniert die in `DJI_MQTT_TOPICS` konfigurierten Topics und
-persistiert empfangene Ereignisse. Standard bleibt `m4/fh2/#`; reale
-DJI-Topics werden erst gemäß der eingesetzten FH2-/Cloud-API-Konfiguration
-eingetragen.
-
-## HTTP-Events
-
-`POST /api/v1/events` ist ein neutraler M4-Webhook-Eingang für offiziell
-konfigurierte FH2-/Sync-Ereignisse oder eigene Adapter.
-
-## WebSocket
-
-`/ws/events` ist ein M4-eigener Live-Kanal mit `ping` und `latest`.
-Er ist keine Nachbildung eines internen DJI-WebSockets.
+Direktor allein startet und bewertet CI; Manager und Fachagenten liefern lokale Tests und Dokumentation.

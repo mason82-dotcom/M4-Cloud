@@ -1,80 +1,98 @@
 # M4-Cloud
 
-Eigenständiger Integrations- und Kontrollserver für **DJI FlightHub 2 On-Premises**.
+M4-Cloud ist der eigene Integrations-, Persistenz- und Kontroll-Layer für zwei getrennte DJI-Pfade:
 
-> M4-Cloud ist vollständig unabhängig von M3-Cloud. Proprietäre DJI-FlightHub-2-Komponenten werden nicht nachgebaut, kopiert oder redistribuiert. Das offiziell bereitgestellte/lizenzierte FH2-On-Premises-System bzw. DJI FH2 AIO bleibt der DJI-Upstream.
+- **DJI FlightHub 2 Privatization OpenAPI V2**: M4 -> vorhandener FH2-On-Premises-Server
+- **DJI Cloud API**: DJI Pilot 2 / Dock -> M4
 
-## V1.1.0
+M4 bildet keine proprietären DJI-Komponenten nach und bleibt unabhängig von M3-Cloud und Lyrebird.
 
-M4-Cloud V1.1 stellt die vollständige eigene Integrations- und Betriebsschicht bereit:
+## Version 1.1.0
 
-- Docker-Compose-Deployment
+Aktuell vorhanden:
+
+- rootless Podman + Quadlet für WSL2/Linux
+- Docker Compose als Referenz-/Director-Validation-Pfad
 - Nginx Reverse Proxy
 - FastAPI Control API
-- PostgreSQL-Persistenz
-- MQTT-Broker
-- MQTT-Integration-Worker
-- HTTPS/FH2-Upstream-Adapter
-- WebSocket-Ereigniskanal
-- neutraler HTTP-Webhook-Eingang
-- Prometheus-Metriken und optionaler Prometheus-Dienst
-- Health-/Readiness-Prüfungen
-- Backup-/Restore-Runbook
-- CI-End-to-End-Abnahme
+- PostgreSQL
+- gehärteter Mosquitto-Broker mit Benutzer-/Passwortauthentifizierung und ACLs
+- MQTT Integration Worker
+- DJI Cloud API MQTT-Ingest
+- Pilot-2-Bootstrap-API
+- dynamische Kamera-/Videopfad-Erkennung über `/manage/api/v1/live/capacity`
+- normalisierte Kamera-/Gimbal-Telemetrie aus MQTT-Events
+- FH2 Privatization OpenAPI V2 read-only für Geräte, HMS, Waylines und Flight Tasks
+- Prometheus-Metriken
+- Health-/Readiness- und Persistenzabnahme
 
-## Arbeitsmodell
+## Sicherheitsgrenzen
 
-Neue M4-Features werden vom **Manager** geliefert und direkt in `main`
-integriert. **RC Pro** unterstützt bei DJI-Controller-, Mobile-SDK- und
-Geräteintegration; **Multispektral** unterstützt bei Kamera-, Medien-,
-Mapping- und multispektralen Datenpfaden.
+Noch nicht freigegeben:
 
-Der Manager führt beide Fachbeiträge zusammen, hält Backend, Deployment,
-Tests und Dokumentation konsistent und ist die zentrale Integrationsstelle.
+- kein externer MQTT-TLS-Listener
+- keine fertige Pilot-2-H5-/JSBridge-Einstiegsseite
+- keine DJI-Gerätekommandos
+- kein DRC
+- keine ungeschützte Internetfreigabe
 
-Ausführlich: `docs/PROJECT-WORKFLOW.md`.
+MQTT bleibt am Host standardmäßig auf `127.0.0.1:1883`.
 
-## Schnellstart
+## Empfohlener lokaler Betrieb
 
-```bash
-cp .env.example .env
-# POSTGRES_PASSWORD in .env ändern
-docker compose up -d --build
-
-curl http://localhost:8080/health
-curl http://localhost:8080/ready
-curl http://localhost:8080/api/v1/system/status
-curl http://localhost:8080/api/v1/fh2/status
-```
-
-Vollständige lokale Abnahme unter Linux/WSL2:
+Unter Ubuntu/WSL2:
 
 ```bash
-sh scripts/verify.sh
+cd ~/src/M4-Cloud
+cp -n .env.example .env
+chmod 600 .env
+nano .env
+# POSTGRES_PASSWORD setzen
+
+./scripts/m4-manager.sh install
+./scripts/m4-manager.sh start
+./scripts/m4-manager.sh verify
 ```
 
-Unter Windows PowerShell:
+Der Installer erzeugt fehlende interne Secrets lokal und baut Control API sowie den gehärteten MQTT-Broker.
 
-```powershell
-.\scripts\verify.ps1
+## Manager
+
+```bash
+./scripts/m4-manager.sh status
+./scripts/m4-manager.sh dji-cloud-status
+./scripts/m4-manager.sh camera-status
+./scripts/m4-manager.sh camera-paths
+./scripts/m4-manager.sh camera-telemetry
+
+./scripts/m4-manager.sh fh2-status
+./scripts/m4-manager.sh fh2-devices drone
+./scripts/m4-manager.sh fh2-waylines
+./scripts/m4-manager.sh fh2-tasks
 ```
 
-Für WSL2 + Ubuntu + das neue Microsoft-WSLC siehe `docs/SETUP-WSL2-WSLC.md`.
+## DJI Cloud API
 
-## Dienste
+Direkter Ingress wird über `DJI_CLOUD_API_ENABLED=true` aktiviert.
 
-| Dienst | Aufgabe | Host-Port |
-| --- | --- | --- |
-| `reverse-proxy` | HTTP/API/WebSocket-Einstieg | 8080 |
-| `control-api` | M4-Control- und Integrations-API | intern |
-| `integration-worker` | MQTT-Ereignisse -> PostgreSQL | intern |
-| `postgres` | M4-eigene Persistenz | intern |
-| `mqtt` | MQTT-Integrationspunkt | 127.0.0.1:1883 |
-| `prometheus` | optionales Monitoring-Profil | 127.0.0.1:9090 |
+Status:
 
-## DJI FlightHub 2 anbinden
+```text
+GET /api/v1/dji/cloud/status
+```
 
-In `.env`:
+M4-Bootstrap für die spätere Pilot-2-H5-Seite:
+
+```text
+GET /api/v1/dji/cloud/bootstrap
+X-M4-Bootstrap-Token: <DJI_BOOTSTRAP_TOKEN>
+```
+
+Die Bootstrap-Antwort enthält sensible Laufzeitwerte und darf bei realer Pilot-2-Anbindung erst über HTTPS verwendet werden.
+
+## FH2 OpenAPI V2
+
+Konfiguration:
 
 ```env
 FH2_UPSTREAM_BASE_URL=https://fh2.example.local
@@ -85,45 +103,27 @@ FH2_LANGUAGE=zh
 FH2_UPSTREAM_VERIFY_TLS=true
 ```
 
-M4 enthält jetzt eine read-only DJI FlightHub 2 Privatization OpenAPI-V2-
-Integration auf Basis des offiziellen DJI-Demos. Unterstützt sind Geräte, HMS,
-Waylines und Flight Tasks. Schreibende oder flugwirksame Funktionen sind in
-dieser Stufe absichtlich nicht freigeschaltet.
+Die Integration ist read-only. Details: `docs/FH2-OPENAPI-V2.md`.
 
-Komfortabel über den Manager:
+## Arbeitsmodell
 
-```bash
-./scripts/m4-manager.sh fh2-status
-./scripts/m4-manager.sh fh2-devices drone
-./scripts/m4-manager.sh fh2-waylines
-./scripts/m4-manager.sh fh2-tasks
-```
+- **Manager**: Features, lokale Tests, Doku, Integration
+- **RC Pro**: DJI-Controller-/Gerätepfad
+- **Multispektral**: Kamera-/Medien-/Mapping-Pfad
+- **Direktor**: alleiniger Owner der CI
 
-Ausführliche deutsche Dokumentation: `docs/FH2-OPENAPI-V2.md`.
-
-Dynamische Kamera-/Videopfad-Erkennung aus der DJI Cloud API:
-
-```bash
-./scripts/m4-manager.sh camera-status
-./scripts/m4-manager.sh camera-paths
-```
-
-M4 liest dafür read-only `/manage/api/v1/live/capacity` ein und normalisiert
-die gemeldeten `video_id`-/Payload-Pfade. Lyrebird wird dafür nicht benötigt.
-Details: `docs/CAMERA-PATHS.md`.
-
-Für MQTT werden die offiziell für die Zielinstallation vorgesehenen Topics
-über `DJI_MQTT_TOPICS` gesetzt.
+GitHub Actions bleibt deshalb auf `workflow_dispatch`; Manager, RC Pro und Multispektral starten keine CI-Läufe.
 
 ## Dokumentation
 
-- `docs/ARCHITECTURE.md` – Systemgrenzen und Komponenten
-- `docs/DJI-INTEGRATION.md` – DJI/FH2-Anbindung
-- `docs/FH2-OPENAPI-V2.md` – FH2 Privatization OpenAPI V2, Auth, Endpunkte und Manager
-- `docs/CAMERA-PATHS.md` – dynamische DJI Kamera-/Videopfad-Erkennung
-- `docs/API.md` – Control API
-- `docs/NETWORK.md` – Ports und Netzwerk
-- `docs/OPERATIONS.md` – Betrieb, Monitoring, Backup und Restore
-- `docs/SETUP-WSL2-WSLC.md` – Windows 11, WSL2, Ubuntu, VS Code und WSLC
-- `docs/SETUP-PODMAN-QUADLET.md` – Docker-Desktop-freier Betrieb mit Podman und Quadlet
-- `SECURITY.md` – Sicherheitsvorgaben
+- `docs/ARCHITECTURE.md`
+- `docs/DJI-INTEGRATION.md`
+- `docs/FH2-OPENAPI-V2.md`
+- `docs/CAMERA-PATHS.md`
+- `docs/API.md`
+- `docs/NETWORK.md`
+- `docs/OPERATIONS.md`
+- `docs/SETUP-PODMAN-QUADLET.md`
+- `docs/SETUP-WSL2-WSLC.md`
+- `docs/PROJECT-WORKFLOW.md`
+- `SECURITY.md`

@@ -73,6 +73,12 @@ case "$cmd" in
   camera-paths)
     curl_json "$base_url/api/v1/cameras/paths"
     ;;
+  camera-telemetry)
+    curl_json "$base_url/api/v1/cameras/telemetry"
+    ;;
+  dji-cloud-status)
+    curl_json "$base_url/api/v1/dji/cloud/status"
+    ;;
   fh2-status)
     curl_json "$base_url/api/v1/fh2/status"
     ;;
@@ -140,9 +146,11 @@ Autostart:
   scripts/m4-manager.sh enable
   scripts/m4-manager.sh disable
 
-DJI Kameraerkennung (read-only):
+DJI Cloud API / Kamera (read-only):
+  scripts/m4-manager.sh dji-cloud-status
   scripts/m4-manager.sh camera-status
   scripts/m4-manager.sh camera-paths
+  scripts/m4-manager.sh camera-telemetry
 
 DJI FlightHub 2 OpenAPI V2 (read-only):
   scripts/m4-manager.sh fh2-status

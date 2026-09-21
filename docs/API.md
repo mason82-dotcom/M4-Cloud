@@ -1,68 +1,72 @@
-# Control API V1
+# Control API
 
-Basis-URL über den Reverse Proxy: `http://<m4-host>:8080`
+Basis-URL:
+
+```text
+http://<m4-host>:8080
+```
 
 ## System
 
 ### `GET /health`
 
-Liveness der Control API.
+Liveness.
 
 ### `GET /ready`
 
-Prüft PostgreSQL, MQTT und den Heartbeat des Integration Workers. HTTP 503
-bedeutet, dass mindestens eine eigene M4-Laufzeitabhängigkeit nicht bereit ist.
+Prüft PostgreSQL, MQTT und Worker-Heartbeat.
 
 ### `GET /api/v1/system/status`
 
-Nicht-sensitiver Systemstatus. Passwörter, FH2-Token und konkrete
-FH2-Upstream-URL werden nicht ausgegeben.
+Nicht-sensitiver Gesamtstatus. Secrets und konkrete Upstream-URLs werden nicht ausgegeben.
 
-## DJI FlightHub 2 OpenAPI V2
+## DJI Cloud API Ingress
 
-### `GET /api/v1/fh2/status`
+### `GET /api/v1/dji/cloud/status`
 
-Prüft die V2-Konfiguration und – wenn URL, Token und Organisations-UUID
-vorhanden sind – über einen minimalen offiziellen Geräte-GET die OpenAPI.
+Liefert:
 
-### `GET /api/v1/fh2/devices`
+- Aktivierungsstatus
+- MQTT-Erreichbarkeit
+- Bootstrap-Bereitschaft
+- aktive DJI-Uplink-Subscriptions
+- Capability-Flags
 
-Parameter: `device_class=airport|drone|base_station`, `page`,
-`page_size`.
+Gerätekommandos und DRC stehen auf `false`.
 
-### `GET /api/v1/fh2/hms`
+### `GET /api/v1/dji/cloud/bootstrap`
 
-Mindestens ein `device_sn`. Ohne expliziten Zeitraum werden die letzten
-sieben Tage verwendet.
+M4-eigener Pilot-2-Bootstrap.
 
-### `GET /api/v1/fh2/waylines`
+Header:
 
-Read-only Wayline-Liste des konfigurierten Projekts.
+```text
+X-M4-Bootstrap-Token: <DJI_BOOTSTRAP_TOKEN>
+```
 
-### `GET /api/v1/fh2/flight-tasks`
+Mögliche Antworten:
 
-Read-only Task-Liste. Optional: `flight_task_status` und mehrfaches `sn`.
+- `401 invalid_bootstrap_token`
+- `503 dji_cloud_api_disabled`
+- `503 dji_cloud_bootstrap_incomplete`
+- `200` mit Platform-, Workspace-, Lizenz-, API-, WS- und MQTT-Konfiguration
 
-Details und DJI-Upstream-Pfade: `docs/FH2-OPENAPI-V2.md`.
-
-## DJI Kamera-/Videopfad-Erkennung
+## Kamera und Gimbal
 
 ### `GET /api/v1/cameras/status`
 
-Zeigt ausschließlich nicht-sensitive Konfigurationsinformationen zur
-Kameraerkennung. Die Cloud-API-Basis-URL und der Token werden nicht ausgegeben.
+Nicht-sensitiver Status der dynamischen Kameraerkennung.
 
 ### `GET /api/v1/cameras/paths`
 
-Liest die aktuell verfügbaren Kamera-/Videopfade read-only aus der offiziellen
-DJI-Cloud-API-Capacity-Ressource:
+Liest read-only die DJI-Ressource:
 
-```http
+```text
 GET /manage/api/v1/live/capacity
 x-auth-token: <access_token>
 ```
 
-M4 normalisiert daraus unter anderem:
+und normalisiert unter anderem:
 
 - `device_sn`
 - `camera_index`
@@ -71,14 +75,19 @@ M4 normalisiert daraus unter anderem:
 - `switchable_video_types`
 - `video_id`
 
-Beispiel für die von DJI verwendete Video-ID-Struktur:
+### `GET /api/v1/cameras/telemetry`
 
-```text
-<drone-sn>/<payload-index>/<video-index>
-1581ABC/67-0-0/normal-0
-```
+Normalisiert Kamera-/Gimbal-Telemetrie aus zuletzt persistierten DJI-MQTT-Events. Der Endpoint ist read-only.
 
-Details: `docs/CAMERA-PATHS.md`.
+## FlightHub 2 Privatization OpenAPI V2
+
+### `GET /api/v1/fh2/status`
+### `GET /api/v1/fh2/devices`
+### `GET /api/v1/fh2/hms`
+### `GET /api/v1/fh2/waylines`
+### `GET /api/v1/fh2/flight-tasks`
+
+Details: `docs/FH2-OPENAPI-V2.md`.
 
 ## Ereignisse
 
@@ -88,25 +97,23 @@ Neutraler HTTP-/Webhook-Eingang.
 
 ### `GET /api/v1/events?limit=100`
 
-Letzte persistierte Integrationsereignisse, Limit 1–500.
+Letzte persistierte Integrationsereignisse. Limit 1–500.
+
+DJI-MQTT-Topics werden als `source=dji-cloud-api` klassifiziert.
+
+## WebSocket
 
 ### `WS /ws/events`
 
-M4-WebSocket mit:
+M4-eigener Event-WebSocket:
 
-- `ping` -> `pong`
-- `latest` -> letzte 50 Ereignisse
+- `ping`
+- `latest`
+
+Dieser Endpoint ist nicht der spätere DJI-Pilot-2-WebSocket.
 
 ## Entwickler
 
-### `GET /api/docs`
-
-Swagger UI.
-
-### `GET /api/openapi.json`
-
-OpenAPI-Schema.
-
-### `GET /metrics`
-
-Prometheus-Metriken; nicht im öffentlichen API-Schema gelistet.
+- `GET /api/docs`
+- `GET /api/openapi.json`
+- `GET /metrics`

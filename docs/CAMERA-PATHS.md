@@ -236,3 +236,23 @@ RC Pro prüft im realen Betrieb insbesondere:
 4. ob ein Token-Refresh die Capacity-Abfrage beeinflusst
 
 M4 selbst bleibt bei dieser Funktion read-only.
+
+
+## Kamera-/Gimbal-Telemetrie
+
+Zusätzlich zu den statischen Live-Capacity-Pfaden normalisiert M4 die zuletzt
+persistierten DJI-MQTT-Ereignisse:
+
+```http
+GET /api/v1/cameras/telemetry
+```
+
+Manager:
+
+```bash
+./scripts/m4-manager.sh camera-telemetry
+```
+
+Der Endpoint ist read-only und dient als gemeinsame Grundlage für RC Pro und
+Multispektral. Kamera- und Gimbal-Werte werden aus real eingehenden Events
+abgeleitet; M4 sendet darüber keine Steuerkommandos.
