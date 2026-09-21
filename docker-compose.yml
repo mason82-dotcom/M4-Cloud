@@ -58,7 +58,7 @@ services:
         chmod 600 /mosquitto/data/passwordfile /mosquitto/data/acl
         exec mosquitto -c /mosquitto/config/mosquitto.conf
     ports:
-      - "${MQTT_BIND:-0.0.0.0}:${MQTT_PUBLIC_PORT:-1883}:1883"
+      - "${MQTT_BIND:-127.0.0.1}:${MQTT_PUBLIC_PORT:-1883}:1883"
     volumes:
       - ./infra/mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
       - mqtt-data:/mosquitto/data
