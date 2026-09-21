@@ -33,7 +33,7 @@ class Settings(BaseSettings):
     fh2_verify_tls: bool = True
     fh2_timeout_seconds: float = 15.0
 
-    dji_cloud_api_enabled: bool = True
+    dji_cloud_api_enabled: bool = False
     dji_cloud_api_base_url: str = ""
     dji_cloud_api_access_token: str = Field(default="", repr=False)
     dji_cloud_api_verify_tls: bool = True

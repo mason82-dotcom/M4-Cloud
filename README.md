@@ -48,8 +48,13 @@ DATABASE_URL=postgresql://m4:<sicheres-passwort>@postgres:5432/m4
 MQTT_SERVICE_PASSWORD=<sicheres-m4-mqtt-passwort>
 DJI_MQTT_PASSWORD=<sicheres-dji-mqtt-passwort>
 
-# IP/Hostname des M4-Hosts, den die RC Pro erreichen kann
-MQTT_PUBLIC_HOST=192.168.x.x
+# Sichere Defaults bleiben lokal:
+MQTT_BIND=127.0.0.1
+MQTT_PUBLIC_HOST=127.0.0.1
+
+# Erst für einen bewusst freigegebenen RC-Pro-Test:
+# MQTT_BIND=0.0.0.0
+# MQTT_PUBLIC_HOST=192.168.x.x
 ```
 
 Optional FH2 konfigurieren:
@@ -61,6 +66,10 @@ FH2_ORG_ID=...
 FH2_PROJECT_ID=...
 FH2_USER_TOKEN=...
 ```
+
+MQTT wird standardmäßig nicht ins LAN geöffnet. Eine RC-Pro-/Pilot-2-
+Freigabe erfolgt erst bewusst; für einen produktiven externen Zugang ist ein
+separater TLS-Pfad erforderlich.
 
 Optional DJI Cloud API HTTP-Kameraerkennung:
 
