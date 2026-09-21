@@ -101,6 +101,17 @@ Komfortabel über den Manager:
 
 Ausführliche deutsche Dokumentation: `docs/FH2-OPENAPI-V2.md`.
 
+Dynamische Kamera-/Videopfad-Erkennung aus der DJI Cloud API:
+
+```bash
+./scripts/m4-manager.sh camera-status
+./scripts/m4-manager.sh camera-paths
+```
+
+M4 liest dafür read-only `/manage/api/v1/live/capacity` ein und normalisiert
+die gemeldeten `video_id`-/Payload-Pfade. Lyrebird wird dafür nicht benötigt.
+Details: `docs/CAMERA-PATHS.md`.
+
 Für MQTT werden die offiziell für die Zielinstallation vorgesehenen Topics
 über `DJI_MQTT_TOPICS` gesetzt.
 
@@ -109,6 +120,7 @@ Für MQTT werden die offiziell für die Zielinstallation vorgesehenen Topics
 - `docs/ARCHITECTURE.md` – Systemgrenzen und Komponenten
 - `docs/DJI-INTEGRATION.md` – DJI/FH2-Anbindung
 - `docs/FH2-OPENAPI-V2.md` – FH2 Privatization OpenAPI V2, Auth, Endpunkte und Manager
+- `docs/CAMERA-PATHS.md` – dynamische DJI Kamera-/Videopfad-Erkennung
 - `docs/API.md` – Control API
 - `docs/NETWORK.md` – Ports und Netzwerk
 - `docs/OPERATIONS.md` – Betrieb, Monitoring, Backup und Restore
