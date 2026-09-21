@@ -67,6 +67,7 @@ async def system_status() -> dict[str, object]:
             "http_configured": cloud.configured,
             "mqtt_endpoint": cloud.mqtt_endpoint,
             "mqtt_username": cloud.mqtt_username,
+            "mqtt_tls": cloud.mqtt_tls_enabled,
             "drc_enabled": False,
         },
     }
