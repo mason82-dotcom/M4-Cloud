@@ -66,14 +66,28 @@ In `.env`:
 
 ```env
 FH2_UPSTREAM_BASE_URL=https://fh2.example.local
-FH2_API_TOKEN=...
+FH2_USER_TOKEN=...
+FH2_ORG_UUID=...
+FH2_PROJECT_UUID=...
+FH2_LANGUAGE=zh
 FH2_UPSTREAM_VERIFY_TLS=true
 ```
 
-Die konkrete FlightHub-OpenAPI unterscheidet sich nach DJI-Version und
-On-Premises-Ausprägung. M4 erfindet deshalb keine undokumentierten DJI-Pfade.
-Konkrete Ressourcen werden gegen die offizielle OpenAPI der eingesetzten
-FH2-Version angebunden.
+M4 enthält jetzt eine read-only DJI FlightHub 2 Privatization OpenAPI-V2-
+Integration auf Basis des offiziellen DJI-Demos. Unterstützt sind Geräte, HMS,
+Waylines und Flight Tasks. Schreibende oder flugwirksame Funktionen sind in
+dieser Stufe absichtlich nicht freigeschaltet.
+
+Komfortabel über den Manager:
+
+```bash
+./scripts/m4-manager.sh fh2-status
+./scripts/m4-manager.sh fh2-devices drone
+./scripts/m4-manager.sh fh2-waylines
+./scripts/m4-manager.sh fh2-tasks
+```
+
+Ausführliche deutsche Dokumentation: `docs/FH2-OPENAPI-V2.md`.
 
 Für MQTT werden die offiziell für die Zielinstallation vorgesehenen Topics
 über `DJI_MQTT_TOPICS` gesetzt.
@@ -82,8 +96,10 @@ Für MQTT werden die offiziell für die Zielinstallation vorgesehenen Topics
 
 - `docs/ARCHITECTURE.md` – Systemgrenzen und Komponenten
 - `docs/DJI-INTEGRATION.md` – DJI/FH2-Anbindung
+- `docs/FH2-OPENAPI-V2.md` – FH2 Privatization OpenAPI V2, Auth, Endpunkte und Manager
 - `docs/API.md` – Control API
 - `docs/NETWORK.md` – Ports und Netzwerk
 - `docs/OPERATIONS.md` – Betrieb, Monitoring, Backup und Restore
-- `docs/SETUP-WSL2-WSLC.md` – Windows 11, WSL2, Ubuntu, VS Code und WSLC\n- `docs/SETUP-PODMAN-QUADLET.md` – Docker-Desktop-freier Betrieb mit Podman und Quadlet
+- `docs/SETUP-WSL2-WSLC.md` – Windows 11, WSL2, Ubuntu, VS Code und WSLC
+- `docs/SETUP-PODMAN-QUADLET.md` – Docker-Desktop-freier Betrieb mit Podman und Quadlet
 - `SECURITY.md` – Sicherheitsvorgaben
