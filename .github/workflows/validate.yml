@@ -40,7 +40,7 @@ jobs:
 
       - name: Run API tests
         working-directory: services/control-api
-        run: pytest -q
+        run: PYTHONPATH=. pytest -q
 
       - name: Validate Compose configuration
         run: docker compose config --quiet
