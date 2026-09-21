@@ -10,6 +10,10 @@ def test_fh2_configuration(monkeypatch) -> None:
     monkeypatch.setenv("FH2_UPSTREAM_VERIFY_TLS", "false")
     monkeypatch.setenv("FH2_TIMEOUT_SECONDS", "7.5")
     monkeypatch.setenv("DJI_MQTT_TOPICS", "a/#, b/+/c")
+    monkeypatch.setenv("DJI_CLOUD_API_BASE_URL", "https://cloud.example.local/")
+    monkeypatch.setenv("DJI_CLOUD_API_TOKEN", "camera-token")
+    monkeypatch.setenv("DJI_CLOUD_API_VERIFY_TLS", "false")
+    monkeypatch.setenv("DJI_CLOUD_API_TIMEOUT_SECONDS", "8")
 
     settings = Settings.from_env()
 
@@ -22,6 +26,11 @@ def test_fh2_configuration(monkeypatch) -> None:
     assert settings.fh2_upstream_verify_tls is False
     assert settings.fh2_timeout_seconds == 7.5
     assert settings.dji_mqtt_topics == ("a/#", "b/+/c")
+    assert settings.dji_cloud_api_configured is True
+    assert settings.dji_cloud_api_base_url == "https://cloud.example.local"
+    assert settings.dji_cloud_api_token == "camera-token"
+    assert settings.dji_cloud_api_verify_tls is False
+    assert settings.dji_cloud_api_timeout_seconds == 8.0
 
 
 def test_legacy_fh2_api_token_is_migration_fallback(monkeypatch) -> None:
