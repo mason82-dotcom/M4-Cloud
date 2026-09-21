@@ -29,6 +29,10 @@ class Settings:
     fh2_language: str
     fh2_upstream_verify_tls: bool
     fh2_timeout_seconds: float
+    dji_cloud_api_base_url: str
+    dji_cloud_api_token: str
+    dji_cloud_api_verify_tls: bool
+    dji_cloud_api_timeout_seconds: float
 
     @property
     def fh2_base_configured(self) -> bool:
@@ -51,6 +55,10 @@ class Settings:
         X-User-Token rather than Authorization: Bearer.
         """
         return self.fh2_user_token
+
+    @property
+    def dji_cloud_api_configured(self) -> bool:
+        return bool(self.dji_cloud_api_base_url and self.dji_cloud_api_token)
 
     @property
     def postgres_dsn(self) -> str:
@@ -104,4 +112,12 @@ class Settings:
                 os.getenv("FH2_UPSTREAM_VERIFY_TLS", "true")
             ),
             fh2_timeout_seconds=float(os.getenv("FH2_TIMEOUT_SECONDS", "15")),
+            dji_cloud_api_base_url=os.getenv("DJI_CLOUD_API_BASE_URL", "").strip().rstrip("/"),
+            dji_cloud_api_token=os.getenv("DJI_CLOUD_API_TOKEN", "").strip(),
+            dji_cloud_api_verify_tls=_as_bool(
+                os.getenv("DJI_CLOUD_API_VERIFY_TLS", "true")
+            ),
+            dji_cloud_api_timeout_seconds=float(
+                os.getenv("DJI_CLOUD_API_TIMEOUT_SECONDS", "15")
+            ),
         )
