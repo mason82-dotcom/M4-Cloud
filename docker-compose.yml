@@ -21,12 +21,16 @@ services:
       MQTT_SERVICE_PASSWORD: ${MQTT_SERVICE_PASSWORD:-change-me-mqtt}
       DJI_MQTT_USERNAME: ${DJI_MQTT_USERNAME:-dji-client}
       DJI_MQTT_PASSWORD: ${DJI_MQTT_PASSWORD:-change-me-dji-mqtt}
+      MQTT_TLS_ENABLED: ${MQTT_TLS_ENABLED:-false}
     entrypoint:
       - /bin/sh
       - -ec
       - |
         rm -f /mosquitto/data/passwordfile /mosquitto/data/acl
-        mosquitto_passwd -b -c /mosquitto/data/passwordfile "$$MQTT_SERVICE_USERNAME" "$$MQTT_SERVICE_PASSWORD"
+        rm -rf /mosquitto/data/conf.d
+        mkdir -p /mosquitto/data/conf.d
+
+        mosquitto_passwd -b -c /mosquitto/data/passwordfile "$MQTT_SERVICE_USERNAME" "$MQTT_SERVICE_PASSWORD"
         mosquitto_passwd -b /mosquitto/data/passwordfile "$$DJI_MQTT_USERNAME" "$$DJI_MQTT_PASSWORD"
 
         {
@@ -56,6 +60,19 @@ services:
         } > /mosquitto/data/acl
 
         chmod 600 /mosquitto/data/passwordfile /mosquitto/data/acl
+
+        if [ "${MQTT_TLS_ENABLED:-false}" = "true" ]; then
+          test -r /run/secrets/mqtt_tls_cert
+          test -r /run/secrets/mqtt_tls_key
+          cat > /mosquitto/data/conf.d/20-tls.conf <<'EOF'
+listener 8883 0.0.0.0
+certfile /run/secrets/mqtt_tls_cert
+keyfile /run/secrets/mqtt_tls_key
+tls_version tlsv1.2
+require_certificate false
+EOF
+        fi
+
         exec mosquitto -c /mosquitto/config/mosquitto.conf
     ports:
       - "${MQTT_BIND:-127.0.0.1}:${MQTT_PUBLIC_PORT:-1883}:1883"
@@ -84,6 +101,7 @@ services:
       MQTT_PORT: "1883"
       MQTT_PUBLIC_HOST: ${MQTT_PUBLIC_HOST:-127.0.0.1}
       MQTT_PUBLIC_PORT: ${MQTT_PUBLIC_PORT:-1883}
+      MQTT_PUBLIC_TLS: ${MQTT_PUBLIC_TLS:-false}
       MQTT_SERVICE_USERNAME: ${MQTT_SERVICE_USERNAME:-m4-service}
       MQTT_SERVICE_PASSWORD: ${MQTT_SERVICE_PASSWORD:-change-me-mqtt}
       DJI_MQTT_USERNAME: ${DJI_MQTT_USERNAME:-dji-client}
