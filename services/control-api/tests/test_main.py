@@ -210,6 +210,50 @@ def test_camera_paths_route_returns_normalized_paths(monkeypatch) -> None:
     assert "camera-secret-token" not in response.text
 
 
+def test_camera_telemetry_route_returns_latest_dji_values(monkeypatch) -> None:
+    monkeypatch.setattr(
+        main,
+        "recent_events",
+        lambda limit: [
+            {
+                "source": "mqtt",
+                "topic": "thing/product/1581ABC/osd",
+                "payload": {
+                    "timestamp": 1790013000123,
+                    "data": {
+                        "cameras": [
+                            {
+                                "payload_index": "67-0-0",
+                                "camera_mode": 0,
+                                "recording_state": 1,
+                                "zoom_factor": 3.5,
+                            }
+                        ],
+                        "67-0-0": {
+                            "payload_index": "67-0-0",
+                            "gimbal_pitch": -45.0,
+                            "gimbal_roll": 0.0,
+                            "gimbal_yaw": 12.0,
+                        },
+                    },
+                },
+            }
+        ],
+    )
+
+    response = client.get("/api/v1/cameras/telemetry?limit=25")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["source"] == "dji-mqtt-events"
+    assert payload["read_only"] is True
+    assert payload["count"] == 1
+    assert payload["telemetry"][0]["payload_index"] == "67-0-0"
+    assert payload["telemetry"][0]["camera"]["zoom_factor"] == 3.5
+    assert payload["telemetry"][0]["gimbal"]["gimbal_pitch"] == -45.0
+
+
+
 def test_camera_paths_requires_cloud_api_configuration(monkeypatch) -> None:
     monkeypatch.delenv("DJI_CLOUD_API_BASE_URL", raising=False)
     monkeypatch.delenv("DJI_CLOUD_API_TOKEN", raising=False)
