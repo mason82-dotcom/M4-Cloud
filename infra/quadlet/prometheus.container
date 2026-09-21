@@ -1,0 +1,18 @@
+[Unit]
+Description=M4-Cloud Prometheus
+Requires=control-api.container
+After=control-api.container
+
+[Container]
+Image=docker.io/prom/prometheus:v3.5.0
+ContainerName=m4-prometheus
+Network=m4.network
+NetworkAlias=prometheus
+PublishPort=127.0.0.1:9090:9090
+Volume=prometheus-data.volume:/prometheus
+Volume=%h/.config/m4-cloud/assets/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+Exec=--config.file=/etc/prometheus/prometheus.yml --storage.tsdb.path=/prometheus
+
+[Service]
+Restart=on-failure
+TimeoutStartSec=180

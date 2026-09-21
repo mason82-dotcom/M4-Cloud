@@ -85,5 +85,5 @@ Für MQTT werden die offiziell für die Zielinstallation vorgesehenen Topics
 - `docs/API.md` – Control API
 - `docs/NETWORK.md` – Ports und Netzwerk
 - `docs/OPERATIONS.md` – Betrieb, Monitoring, Backup und Restore
-- `docs/SETUP-WSL2-WSLC.md` – Windows 11, WSL2, Ubuntu, VS Code und WSLC
+- `docs/SETUP-WSL2-WSLC.md` – Windows 11, WSL2, Ubuntu, VS Code und WSLC\n- `docs/SETUP-PODMAN-QUADLET.md` – Docker-Desktop-freier Betrieb mit Podman und Quadlet
 - `SECURITY.md` – Sicherheitsvorgaben

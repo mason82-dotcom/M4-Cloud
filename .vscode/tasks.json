@@ -1,0 +1,52 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "M4: Podman installieren/aktualisieren",
+      "type": "shell",
+      "command": "./scripts/m4-manager.sh install",
+      "problemMatcher": []
+    },
+    {
+      "label": "M4: Start",
+      "type": "shell",
+      "command": "./scripts/m4-manager.sh start",
+      "problemMatcher": []
+    },
+    {
+      "label": "M4: Stop",
+      "type": "shell",
+      "command": "./scripts/m4-manager.sh stop",
+      "problemMatcher": []
+    },
+    {
+      "label": "M4: Status",
+      "type": "shell",
+      "command": "./scripts/m4-manager.sh status",
+      "problemMatcher": []
+    },
+    {
+      "label": "M4: Abnahme",
+      "type": "shell",
+      "command": "./scripts/m4-manager.sh verify",
+      "problemMatcher": []
+    },
+    {
+      "label": "M4: Logs",
+      "type": "shell",
+      "command": "./scripts/m4-manager.sh logs",
+      "isBackground": true,
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated"
+      }
+    },
+    {
+      "label": "M4: Monitoring starten",
+      "type": "shell",
+      "command": "./scripts/m4-manager.sh monitoring-start",
+      "problemMatcher": []
+    }
+  ]
+}
