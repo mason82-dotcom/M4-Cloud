@@ -3,7 +3,6 @@ from __future__ import annotations
 import json
 import signal
 import threading
-import time
 from typing import Any
 
 import paho.mqtt.client as mqtt
@@ -22,15 +21,25 @@ def decode_payload(payload: bytes) -> Any:
         return text
 
 
-def on_connect(client: mqtt.Client, userdata: Any, flags: Any, reason_code: Any, properties: Any = None) -> None:
+def on_connect(
+    client: mqtt.Client,
+    userdata: Any,
+    flags: Any,
+    reason_code: Any,
+    properties: Any = None,
+) -> None:
     settings = Settings.from_env()
-    if int(reason_code) != 0:
+    if reason_code != 0:
         return
     for topic in settings.dji_mqtt_topics:
         client.subscribe(topic, qos=1)
 
 
-def on_message(client: mqtt.Client, userdata: Any, message: mqtt.MQTTMessage) -> None:
+def on_message(
+    client: mqtt.Client,
+    userdata: Any,
+    message: mqtt.MQTTMessage,
+) -> None:
     store_event(
         source="mqtt",
         topic=message.topic,
@@ -46,7 +55,10 @@ def main() -> None:
     settings = Settings.from_env()
     ensure_schema()
 
-    client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2, client_id="m4-integration-worker")
+    client = mqtt.Client(
+        mqtt.CallbackAPIVersion.VERSION2,
+        client_id="m4-integration-worker",
+    )
     client.on_connect = on_connect
     client.on_message = on_message
 
@@ -57,6 +69,7 @@ def main() -> None:
         try:
             client.connect(settings.mqtt_host, settings.mqtt_port, keepalive=30)
             client.loop_start()
+            touch_heartbeat("integration-worker")
             while not STOP.wait(10):
                 touch_heartbeat("integration-worker")
             client.loop_stop()
