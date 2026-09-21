@@ -110,3 +110,28 @@ def test_metrics() -> None:
     response = client.get("/metrics")
     assert response.status_code == 200
     assert "python_info" in response.text
+
+
+def test_dji_cloud_status_disabled_by_default(monkeypatch) -> None:
+    monkeypatch.delenv("DJI_CLOUD_API_ENABLED", raising=False)
+
+    response = client.get("/api/v1/dji/cloud/status")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["enabled"] is False
+    assert payload["subscriptions"] == []
+    assert payload["capabilities"]["device_commands"] is False
+
+
+def test_dji_cloud_status_enabled(monkeypatch) -> None:
+    monkeypatch.setenv("DJI_CLOUD_API_ENABLED", "true")
+    monkeypatch.setattr(Settings, "mqtt_reachable", lambda self: True)
+
+    response = client.get("/api/v1/dji/cloud/status")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["enabled"] is True
+    assert payload["mqtt_reachable"] is True
+    assert "thing/product/+/osd" in payload["subscriptions"]

@@ -61,3 +61,10 @@ Swagger UI.
 
 Prometheus-Metriken der Control API. Der optionale Prometheus-Container greift
 direkt im Compose-Netz darauf zu.
+
+
+## `GET /api/v1/dji/cloud/status`
+
+Status der optionalen DJI-Cloud-API-MQTT-Ingest-Schicht. Der Endpoint gibt
+keine Zugangsdaten aus. In Phase 1 sind Pilot-2-Webview-Bootstrap,
+Gerätekommandos und DRC bewusst noch deaktiviert.

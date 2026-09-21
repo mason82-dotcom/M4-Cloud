@@ -13,7 +13,7 @@ M4-Cloud V1 stellt die vollständige eigene Integrations- und Betriebsschicht be
 - FastAPI Control API
 - PostgreSQL-Persistenz
 - MQTT-Broker
-- MQTT-Integration-Worker
+- MQTT-Integration-Worker\n- optionaler DJI-Cloud-API-MQTT-Ingest
 - HTTPS/FH2-Upstream-Adapter
 - WebSocket-Ereigniskanal
 - neutraler HTTP-Webhook-Eingang

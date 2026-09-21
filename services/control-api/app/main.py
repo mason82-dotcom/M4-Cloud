@@ -66,12 +66,38 @@ def system_status() -> dict[str, object]:
             "configured": settings.fh2_configured,
             "verify_tls": settings.fh2_upstream_verify_tls,
         },
+        "dji_cloud_api": {
+            "enabled": settings.dji_cloud_api_enabled,
+        },
         "integration": {
             "mqtt": {"host": settings.mqtt_host, "port": settings.mqtt_port},
             "https": True,
             "websocket": True,
             "event_persistence": True,
             "metrics": True,
+        },
+    }
+
+
+@app.get("/api/v1/dji/cloud/status")
+def dji_cloud_status() -> dict[str, object]:
+    settings = Settings.from_env()
+    subscriptions = (
+        list(settings.dji_cloud_api_topics)
+        if settings.dji_cloud_api_enabled
+        else []
+    )
+    return {
+        "enabled": settings.dji_cloud_api_enabled,
+        "mqtt_reachable": (
+            settings.mqtt_reachable() if settings.dji_cloud_api_enabled else False
+        ),
+        "subscriptions": subscriptions,
+        "capabilities": {
+            "mqtt_ingest": settings.dji_cloud_api_enabled,
+            "pilot2_webview_bootstrap": False,
+            "device_commands": False,
+            "drc": False,
         },
     }
 
