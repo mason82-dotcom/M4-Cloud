@@ -43,6 +43,7 @@ def mqtt_reachable(settings: Settings, timeout_seconds: float = 2.0) -> bool:
 
     client.on_connect = on_connect
 
+    previous_timeout = socket.getdefaulttimeout()
     try:
         socket.setdefaulttimeout(timeout_seconds)
         client.connect(settings.mqtt_host, settings.mqtt_port, keepalive=5)
@@ -52,6 +53,7 @@ def mqtt_reachable(settings: Settings, timeout_seconds: float = 2.0) -> bool:
     except (OSError, RuntimeError, ValueError):
         return False
     finally:
+        socket.setdefaulttimeout(previous_timeout)
         try:
             client.loop_stop()
             client.disconnect()
