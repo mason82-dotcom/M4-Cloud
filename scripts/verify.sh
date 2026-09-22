@@ -15,6 +15,13 @@ command -v curl >/dev/null 2>&1 || {
   exit 2
 }
 
+echo "Bootstrap-Token prüfen..."
+DJI_BOOTSTRAP_TOKEN_VALUE="$(sed -n 's/^DJI_BOOTSTRAP_TOKEN=//p' .env | tail -n 1)"
+if [ -z "$DJI_BOOTSTRAP_TOKEN_VALUE" ] || [ "$DJI_BOOTSTRAP_TOKEN_VALUE" = "change-me-bootstrap" ]; then
+  echo "DJI_BOOTSTRAP_TOKEN muss in .env gesetzt werden." >&2
+  exit 2
+fi
+
 echo "Compose-Konfiguration prüfen..."
 docker compose config >/dev/null
 
@@ -52,7 +59,15 @@ curl --fail --silent "$base_url/health"
 echo
 curl --fail --silent "$base_url/api/v1/system"
 echo
-curl --fail --silent "$base_url/api/v1/cloud/bootstrap"
+if curl --fail --silent \
+  -H "X-M4-Bootstrap-Token: wrong-token" \
+  "$base_url/api/v1/cloud/bootstrap" >/dev/null 2>&1; then
+  echo "Bootstrap akzeptiert einen falschen Token." >&2
+  exit 1
+fi
+curl --fail --silent \
+  -H "X-M4-Bootstrap-Token: $DJI_BOOTSTRAP_TOKEN_VALUE" \
+  "$base_url/api/v1/cloud/bootstrap"
 echo
 curl --fail --silent "$base_url/api/v1/fh2/status"
 echo
@@ -60,6 +75,13 @@ curl --fail --silent "$base_url/api/v1/cameras/status"
 echo
 
 echo "MQTT-Rollen prüfen..."
+echo "Anonymen MQTT-Zugriff ablehnen..."
+if docker compose exec -T mqtt mosquitto_pub \
+  -h 127.0.0.1 -p 1883 -q 1 -t m4/verify -m anonymous >/dev/null 2>&1; then
+  echo "Anonymer MQTT-Zugriff wurde unerwartet akzeptiert." >&2
+  exit 1
+fi
+
 docker compose exec -T mqtt sh -ec '
   mosquitto_pub -h 127.0.0.1 -p 1883 \
     -u "$MQTT_SERVICE_USERNAME" -P "$MQTT_SERVICE_PASSWORD" \

@@ -24,6 +24,7 @@ class Settings(BaseSettings):
     mqtt_service_password: str = Field(default="change-me-mqtt", repr=False)
     dji_mqtt_username: str = "dji-client"
     dji_mqtt_password: str = Field(default="change-me-dji-mqtt", repr=False)
+    dji_bootstrap_token: str = Field(default="", repr=False)
 
     fh2_enabled: bool = False
     fh2_base_url: str = ""

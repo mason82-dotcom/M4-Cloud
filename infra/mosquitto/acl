@@ -11,8 +11,6 @@ topic read thing/product/+/requests
 topic read thing/product/+/events
 topic read thing/product/+/services_reply
 topic read thing/product/+/property/set_reply
-topic write thing/product/+/services
-topic write thing/product/+/property/set
 
 user dji-client
 topic write sys/product/+/status

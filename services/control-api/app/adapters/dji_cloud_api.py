@@ -49,14 +49,18 @@ class DJICloudAPIAdapter:
     def mqtt_username(self) -> str:
         return self.settings.dji_mqtt_username
 
-    def bootstrap_descriptor(self) -> dict[str, object]:
+    def bootstrap_descriptor(self, *, include_credentials: bool = False) -> dict[str, object]:
+        mqtt: dict[str, object] = {
+            "host": self.settings.mqtt_public_host,
+            "port": self.settings.mqtt_public_port,
+            "username": self.settings.dji_mqtt_username,
+            "password_in_response": include_credentials,
+        }
+        if include_credentials:
+            mqtt["password"] = self.settings.dji_mqtt_password
+
         return {
-            "mqtt": {
-                "host": self.settings.mqtt_public_host,
-                "port": self.settings.mqtt_public_port,
-                "username": self.settings.dji_mqtt_username,
-                "password_in_response": False,
-            },
+            "mqtt": mqtt,
             "topics": {
                 "device_publish": [
                     "sys/product/+/status",
