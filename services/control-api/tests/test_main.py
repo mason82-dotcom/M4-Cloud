@@ -42,6 +42,8 @@ def test_ready_returns_503_if_dependency_is_down(monkeypatch) -> None:
 def test_system_keeps_dji_paths_separate_and_hides_secrets(monkeypatch) -> None:
     monkeypatch.setenv("FH2_USER_TOKEN", "fh2-secret")
     monkeypatch.setenv("DJI_CLOUD_API_ACCESS_TOKEN", "cloud-secret")
+    monkeypatch.setenv("DJI_BOOTSTRAP_TOKEN", "bootstrap-secret")
+    monkeypatch.setenv("DJI_MQTT_PASSWORD", "pilot-secret")
     main.get_settings.cache_clear()
 
     response = client.get("/api/v1/system")
@@ -53,20 +55,47 @@ def test_system_keeps_dji_paths_separate_and_hides_secrets(monkeypatch) -> None:
     assert architecture["lyrebird"] == "disabled"
     assert "fh2-secret" not in response.text
     assert "cloud-secret" not in response.text
+    assert "bootstrap-secret" not in response.text
+    assert "pilot-secret" not in response.text
 
     main.get_settings.cache_clear()
 
 
-def test_bootstrap_never_returns_mqtt_password() -> None:
+def test_bootstrap_requires_server_token(monkeypatch) -> None:
+    monkeypatch.delenv("DJI_BOOTSTRAP_TOKEN", raising=False)
+    main.get_settings.cache_clear()
     response = client.get("/api/v1/cloud/bootstrap")
+    assert response.status_code == 503
+    assert response.json()["detail"] == "bootstrap_not_configured"
+    main.get_settings.cache_clear()
 
+
+def test_bootstrap_rejects_invalid_token(monkeypatch) -> None:
+    monkeypatch.setenv("DJI_BOOTSTRAP_TOKEN", "bootstrap-secret")
+    main.get_settings.cache_clear()
+    response = client.get(
+        "/api/v1/cloud/bootstrap",
+        headers={"X-M4-Bootstrap-Token": "wrong-token"},
+    )
+    assert response.status_code == 401
+    assert response.json()["detail"] == "invalid_bootstrap_token"
+    main.get_settings.cache_clear()
+
+
+def test_bootstrap_returns_mqtt_credentials_after_auth(monkeypatch) -> None:
+    monkeypatch.setenv("DJI_BOOTSTRAP_TOKEN", "bootstrap-secret")
+    monkeypatch.setenv("DJI_MQTT_PASSWORD", "pilot-secret")
+    main.get_settings.cache_clear()
+    response = client.get(
+        "/api/v1/cloud/bootstrap",
+        headers={"X-M4-Bootstrap-Token": "bootstrap-secret"},
+    )
     assert response.status_code == 200
     body = response.json()
-    assert body["mqtt"]["password_in_response"] is False
-    assert "password" not in {
-        key for key in body["mqtt"] if key != "password_in_response"
-    }
+    assert body["mqtt"]["password_in_response"] is True
+    assert body["mqtt"]["password"] == "pilot-secret"
     assert body["topics"]["drc_enabled"] is False
+    main.get_settings.cache_clear()
 
 
 def test_camera_status_is_read_only() -> None:

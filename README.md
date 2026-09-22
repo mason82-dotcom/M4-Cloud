@@ -46,6 +46,7 @@ POSTGRES_PASSWORD=<sicheres-passwort>
 
 MQTT_SERVICE_PASSWORD=<sicheres-m4-mqtt-passwort>
 DJI_MQTT_PASSWORD=<sicheres-dji-mqtt-passwort>
+DJI_BOOTSTRAP_TOKEN=<sicheres-bootstrap-token>
 
 # IP/Hostname des M4-Hosts, den die RC Pro erreichen kann
 MQTT_PUBLIC_HOST=192.168.x.x
@@ -104,7 +105,7 @@ GET /api/v1/system
 DJI Cloud API / RC:
 
 ```text
-GET /api/v1/cloud/bootstrap
+GET /api/v1/cloud/bootstrap   # Header: X-M4-Bootstrap-Token
 GET /api/v1/cameras/status
 GET /api/v1/cameras/paths
 ```
@@ -126,7 +127,7 @@ Der interne Benutzer darf:
 
 - `m4/#` lesen/schreiben
 - DJI Status/State/OSD/Requests/Events/Replies lesen
-- DJI `services` und `property/set` schreiben
+- keine DJI-Gerätekommandos publizieren
 
 ### DJI-/RC-Client
 
