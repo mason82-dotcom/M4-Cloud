@@ -24,9 +24,17 @@ docker compose build
 echo "Stack starten..."
 docker compose up -d
 
+api_port="$(docker compose port control-api 8080 | tail -n 1 | sed -E 's/.*:([0-9]+)$/\1/')"
+if [ -z "$api_port" ]; then
+  echo "Control-API-Port konnte nicht ermittelt werden." >&2
+  docker compose ps
+  exit 1
+fi
+base_url="http://127.0.0.1:$api_port"
+
 echo "Auf Readiness warten..."
 i=0
-until curl --fail --silent "http://127.0.0.1:${M4_PORT:-8080}/ready" >/tmp/m4-ready.json 2>/dev/null; do
+until curl --fail --silent "$base_url/ready" >/tmp/m4-ready.json 2>/dev/null; do
   i=$((i + 1))
   if [ "$i" -ge 60 ]; then
     cat /tmp/m4-ready.json 2>/dev/null || true
@@ -40,15 +48,15 @@ cat /tmp/m4-ready.json
 echo
 
 echo "Basis-APIs prüfen..."
-curl --fail --silent "http://127.0.0.1:${M4_PORT:-8080}/health"
+curl --fail --silent "$base_url/health"
 echo
-curl --fail --silent "http://127.0.0.1:${M4_PORT:-8080}/api/v1/system"
+curl --fail --silent "$base_url/api/v1/system"
 echo
-curl --fail --silent "http://127.0.0.1:${M4_PORT:-8080}/api/v1/cloud/bootstrap"
+curl --fail --silent "$base_url/api/v1/cloud/bootstrap"
 echo
-curl --fail --silent "http://127.0.0.1:${M4_PORT:-8080}/api/v1/fh2/status"
+curl --fail --silent "$base_url/api/v1/fh2/status"
 echo
-curl --fail --silent "http://127.0.0.1:${M4_PORT:-8080}/api/v1/cameras/status"
+curl --fail --silent "$base_url/api/v1/cameras/status"
 echo
 
 echo "MQTT-Rollen prüfen..."
