@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, Query, Response, status
+from fastapi import FastAPI, HTTPException, Query, Response, WebSocket, WebSocketDisconnect, status
 from starlette.concurrency import run_in_threadpool
 
 from app import __version__
@@ -10,6 +10,9 @@ from app.adapters.dji_cloud_api import (
 from app.adapters.fh2_openapi import FH2Error, FH2NotConfigured, FH2OpenAPIClient
 from app.config import get_settings
 from app.runtime import database_reachable, mqtt_reachable
+from app.telemetry import TelemetryHub
+
+telemetry_hub = TelemetryHub(get_settings())
 
 app = FastAPI(
     title="M4 Control API",
@@ -165,3 +168,40 @@ async def fh2_waylines(
     except FH2Error as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
     return {"data": data}
+
+
+@app.get("/api/v1/telemetry/status")
+async def telemetry_status() -> dict[str, object]:
+    return telemetry_hub.status
+
+
+@app.websocket("/ws/v1/telemetry")
+async def telemetry_websocket(websocket: WebSocket) -> None:
+    await websocket.accept()
+    await telemetry_hub.start()
+    queue = telemetry_hub.subscribe()
+    await websocket.send_json(
+        {
+            "type": "m4.telemetry.ready",
+            **telemetry_hub.status,
+        }
+    )
+
+    try:
+        while True:
+            event = await queue.get()
+            await websocket.send_json(event)
+    except WebSocketDisconnect:
+        return
+    finally:
+        telemetry_hub.unsubscribe(queue)
+
+
+@app.get("/api/v1/devices/topology")
+async def devices_topology() -> dict[str, object]:
+    snapshot = telemetry_hub.registry.snapshot()
+    return {
+        "source": "dji_cloud_api",
+        "read_only": True,
+        **snapshot,
+    }

@@ -166,3 +166,24 @@ Für VS Code steht eine schlanke Python-3.12-Dev-Container-Konfiguration unter
 Entwicklungscontainers.
 
 Siehe `docs/DEVCONTAINER.md`.
+
+
+## Echtzeit-Telemetrie
+
+Die WebUI kann DJI OSD-/State-/Event-/Statusdaten read-only über
+`/ws/v1/telemetry` empfangen. Status: `GET /api/v1/telemetry/status`.
+
+Siehe `docs/TELEMETRY-WEBSOCKET.md`.
+
+
+## DRC
+
+DRC bleibt deaktiviert. Die verifizierte Topic-/Sequenzsemantik und die
+Sicherheits-Gates sind in `docs/DRC-DESIGN.md` dokumentiert.
+
+
+## RC Pro Discovery
+
+Gateway↔Aircraft-Zuordnung über DJI `update_topo` ist in
+`docs/RC-PRO-DISCOVERY.md` beschrieben. M4 entfernt dabei
+`device_secret` und `nonce` vor jeder WebUI-Ausgabe.

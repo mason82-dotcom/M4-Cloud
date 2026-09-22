@@ -76,3 +76,24 @@ def test_camera_status_is_read_only() -> None:
     body = response.json()
     assert body["read_only"] is True
     assert body["lyrebird"] is False
+
+
+def test_telemetry_status_is_read_only() -> None:
+    response = client.get("/api/v1/telemetry/status")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["read_only"] is True
+    assert body["drc_enabled"] is False
+    assert "thing/product/+/osd" in body["topics"]
+
+
+def test_devices_topology_is_read_only() -> None:
+    response = client.get("/api/v1/devices/topology")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["source"] == "dji_cloud_api"
+    assert body["read_only"] is True
+    assert "gateways" in body
+    assert "devices" in body
