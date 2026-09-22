@@ -1,7 +1,7 @@
+import hmac
+
 from fastapi import FastAPI, Header, HTTPException, Query, Response, status
 from starlette.concurrency import run_in_threadpool
-
-import hmac
 
 from app import __version__
 from app.adapters.dji_cloud_api import (
