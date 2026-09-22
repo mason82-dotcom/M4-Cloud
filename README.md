@@ -146,7 +146,7 @@ MQTT läuft in V2.0 ohne TLS und ist daher für das vertrauenswürdige Heim-/LAN
 
 ## Zielhost
 
-V2.0 ist für den vorhandenen Docker-/WSL-Host vorgesehen. Es gibt keine Raspberry-Pi-spezifische Konfiguration oder Betriebsanforderung.
+V2.0 ist für den vorhandenen Docker-/WSL-Host vorgesehen.
 
 ## Projektregeln
 
