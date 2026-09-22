@@ -21,7 +21,21 @@ Weitere V2-Endpunkte werden ausschließlich im FH2-Adapter ergänzt.
 
 Die Cloud API bleibt ein eigener Adapter. MQTT, HTTPS und WebSocket werden nicht in den FH2-Client eingebaut.
 
-Der Basisstand definiert zunächst nur die Integrationsgrenze. Bootstrap-Authentifizierung, Gerätecredentials und dynamische ACLs folgen als eigener Baustein.
+Der Basisstand trennt Cloud API und FH2 strikt. MQTT nutzt getrennte M4-/DJI-Credentials und ACLs. Der Bootstrap ist über `X-M4-Bootstrap-Token` geschützt und gibt das DJI-MQTT-Passwort nur nach erfolgreicher Bootstrap-Authentifizierung aus. DRC und aktive Gerätekommandos bleiben deaktiviert.
+
+### Pilot-2-Bootstrap
+
+```http
+GET /api/v1/cloud/bootstrap
+X-M4-Bootstrap-Token: <DJI_BOOTSTRAP_TOKEN>
+```
+
+Ohne konfigurierten Bootstrap-Token antwortet M4 mit HTTP 503, bei falschem
+Token mit HTTP 401. Erst ein gültiger Token liefert die MQTT-Zugangsdaten für
+den DJI-/RC-Client.
+
+Der Bootstrap ist noch kein vollständiger Pilot-2-H5-Login. Vor WAN-Nutzung
+sind HTTPS und ein externer MQTT-TLS-Pfad erforderlich.
 
 ## Kamera und Gimbal
 
