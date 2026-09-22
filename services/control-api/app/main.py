@@ -195,3 +195,13 @@ async def telemetry_websocket(websocket: WebSocket) -> None:
         return
     finally:
         telemetry_hub.unsubscribe(queue)
+
+
+@app.get("/api/v1/devices/topology")
+async def devices_topology() -> dict[str, object]:
+    snapshot = telemetry_hub.registry.snapshot()
+    return {
+        "source": "dji_cloud_api",
+        "read_only": True,
+        **snapshot,
+    }

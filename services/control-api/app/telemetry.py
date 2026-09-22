@@ -8,12 +8,16 @@ from typing import Any
 import paho.mqtt.client as mqtt
 
 from app.config import Settings
+from app.discovery import DeviceRegistry
 
 DJI_TELEMETRY_TOPICS = (
     "thing/product/+/osd",
     "thing/product/+/state",
     "thing/product/+/events",
     "sys/product/+/status",
+    # RC-Pro device documentation also shows thing/product/{gateway_sn}/status
+    # for update_topo. Support both read-only forms.
+    "thing/product/+/status",
 )
 
 
@@ -28,7 +32,7 @@ def normalize_dji_telemetry(topic: str, payload: bytes) -> dict[str, object] | N
 
     if namespace == "thing" and suffix in {"osd", "state", "events"}:
         kind = suffix
-    elif namespace == "sys" and suffix == "status":
+    elif namespace in {"sys", "thing"} and suffix == "status":
         kind = "status"
     else:
         return None
@@ -59,9 +63,16 @@ def normalize_dji_telemetry(topic: str, payload: bytes) -> dict[str, object] | N
 
 
 class TelemetryHub:
-    def __init__(self, settings: Settings, *, queue_size: int = 128) -> None:
+    def __init__(
+        self,
+        settings: Settings,
+        *,
+        queue_size: int = 128,
+        registry: DeviceRegistry | None = None,
+    ) -> None:
         self.settings = settings
         self.queue_size = queue_size
+        self.registry = registry or DeviceRegistry()
         self._client: mqtt.Client | None = None
         self._loop: asyncio.AbstractEventLoop | None = None
         self._queues: set[asyncio.Queue[dict[str, object]]] = set()
@@ -162,6 +173,26 @@ class TelemetryHub:
         event = normalize_dji_telemetry(message.topic, message.payload)
         if event is None:
             return
+
+        payload = event.get("payload")
+        if (
+            event.get("kind") == "status"
+            and event.get("method") == "update_topo"
+            and isinstance(payload, dict)
+            and isinstance(payload.get("data"), dict)
+        ):
+            public_topology = self.registry.apply_update_topo(
+                str(event["device_sn"]),
+                payload["data"],
+            )
+            event = {
+                **event,
+                "type": "dji.topology",
+                "payload": {
+                    "method": "update_topo",
+                    "data": public_topology,
+                },
+            }
 
         self._last_message_at_ms = int(event["received_at_ms"])
         if self._loop is None:

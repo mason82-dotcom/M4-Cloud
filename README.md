@@ -180,3 +180,10 @@ Siehe `docs/TELEMETRY-WEBSOCKET.md`.
 
 DRC bleibt deaktiviert. Die verifizierte Topic-/Sequenzsemantik und die
 Sicherheits-Gates sind in `docs/DRC-DESIGN.md` dokumentiert.
+
+
+## RC Pro Discovery
+
+Gateway↔Aircraft-Zuordnung über DJI `update_topo` ist in
+`docs/RC-PRO-DISCOVERY.md` beschrieben. M4 entfernt dabei
+`device_secret` und `nonce` vor jeder WebUI-Ausgabe.
