@@ -55,6 +55,7 @@ services:
           echo "topic read thing/product/+/property/set"
         } > /mosquitto/data/acl
 
+        chown mosquitto:mosquitto /mosquitto/data/passwordfile /mosquitto/data/acl 2>/dev/null || true
         chmod 600 /mosquitto/data/passwordfile /mosquitto/data/acl
         exec mosquitto -c /mosquitto/config/mosquitto.conf
     ports:
