@@ -157,3 +157,12 @@ V2.0 ist für den vorhandenen Docker-/WSL-Host vorgesehen.
 - keine Lyrebird-Abhängigkeit
 - keine Secrets im Repository
 - keine DRC-/Flugsteuerung in V2.0
+
+
+## Entwicklungscontainer
+
+Für VS Code steht eine schlanke Python-3.12-Dev-Container-Konfiguration unter
+`.devcontainer/` bereit. Die M4-Runtime-Dienste bleiben außerhalb des
+Entwicklungscontainers.
+
+Siehe `docs/DEVCONTAINER.md`.
