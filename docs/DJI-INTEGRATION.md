@@ -1,30 +1,157 @@
-# DJI-Integration
+# DJI-Integration in M4-Cloud V2.0
+
+## Grundsatz
+
+FlightHub 2 OpenAPI V2 und DJI Cloud API bleiben getrennte Adapterpfade.
+
+M4 führt beide Pfade nur über das kanonische interne Domainmodell zusammen.
+Lyrebird ist deaktiviert.
 
 ## FlightHub 2 / OpenAPI V2
 
-Der FH2-Adapter injiziert zentral:
+Der FH2-Adapter arbeitet read-only und injiziert zentral:
 
-- `x-user-token`
-- `X-Project-Uuid`
+- `X-User-Token`
+- `X-Project-Uuid` bei projektbezogenen Aufrufen
 - `X-Request-Id`
 - `X-Language`
 
-Initiale Ressourcen:
+Implementierte Ressourcen:
 
 - Geräte: `/openapi/v2.0/manage/api/v1/organizations/{orgId}/manage-devices`
 - Flugaufgaben: `/openapi/v2.0/task/api/v2/workspaces/{projectId}/flight-tasks`
 - Waylines: `/openapi/v2.0/wayline/api/v1/workspaces/{projectId}/web-waylines`
 
-Weitere V2-Endpunkte werden ausschließlich im FH2-Adapter ergänzt.
+M4 akzeptiert nur 2xx als erfolgreichen HTTP-Status. DJI-Businessfehler mit
+`code != 0` werden ebenfalls als Fehler behandelt.
 
-## DJI Cloud API
+M4-Endpunkte:
 
-Die Cloud API bleibt ein eigener Adapter. MQTT, HTTPS und WebSocket werden nicht in den FH2-Client eingebaut.
+```text
+GET /api/v1/fh2/status
+GET /api/v1/fh2/devices
+GET /api/v1/fh2/waylines
+GET /api/v1/fh2/flight-tasks
+```
 
-Der Basisstand definiert zunächst nur die Integrationsgrenze. Bootstrap-Authentifizierung, Gerätecredentials und dynamische ACLs folgen als eigener Baustein.
+## DJI Cloud API HTTP
 
-## Kamera und Gimbal
+Die Kameraerkennung nutzt read-only:
 
-Intern nutzt M4 stabile Felder wie `payload_index`, `lens_index`, `live_source`, `zoom_factor`, `focal_length_mm`, `pitch_deg`, `roll_deg` und `yaw_deg`.
+```http
+GET /manage/api/v1/live/capacity
+x-auth-token: <access_token>
+```
 
-Mavic 3E, Mavic 3T und Multispektral werden über Adapter-Mappings auf dasselbe Domainmodell geführt.
+M4 normalisiert die Antwort auf stabile Kamera-/Videoobjekte.
+
+Video-ID:
+
+```text
+<device_sn>/<payload_index>/<video_index>
+```
+
+Beispiel:
+
+```text
+DRONE1/67-0-0/normal-0
+```
+
+M4-Endpunkte:
+
+```text
+GET /api/v1/cameras/status
+GET /api/v1/cameras/paths
+```
+
+## DJI Cloud API MQTT
+
+Mosquitto läuft mit:
+
+```text
+allow_anonymous false
+```
+
+Es existieren zwei getrennte Rollen.
+
+### M4-Service
+
+Der interne M4-Benutzer darf:
+
+- `m4/#` lesen/schreiben
+- DJI Status/State/OSD/Requests/Events/Replies lesen
+- DJI `services` und `property/set` schreiben
+- `$SYS/#` für Brokerdiagnose lesen
+
+### DJI-/RC-Client
+
+Der externe DJI-/RC-Benutzer darf:
+
+- `sys/product/+/status` publizieren
+- `thing/product/+/state` publizieren
+- `thing/product/+/osd` publizieren
+- `thing/product/+/requests` publizieren
+- `thing/product/+/events` publizieren
+- `thing/product/+/services_reply` publizieren
+- `thing/product/+/property/set_reply` publizieren
+- `thing/product/+/services` abonnieren
+- `thing/product/+/property/set` abonnieren
+
+Diese Topic-Klassen folgen dem offiziellen DJI Cloud API Demo als
+Protokollreferenz.
+
+## Bootstrap-Descriptor
+
+M4 stellt eine nicht-sensitive Konfigurationsbeschreibung bereit:
+
+```http
+GET /api/v1/cloud/bootstrap
+```
+
+Ausgegeben werden:
+
+- erreichbarer MQTT-Host
+- MQTT-Port
+- DJI-/RC-Benutzername
+- erlaubte Topic-Klassen
+- DRC-Status
+
+Das MQTT-Passwort wird **nicht** in der Antwort ausgegeben.
+
+## DRC und Flugsteuerung
+
+In V2.0 nicht freigegeben:
+
+```text
+thing/product/+/drc/up
+thing/product/+/drc/down
+```
+
+Ebenfalls nicht Bestandteil von V2.0:
+
+- Aircraft Control
+- RTH
+- Missionsstart
+- Payload Control
+- Kamera-Fernsteuerung
+
+## Kamera- und Multispektralmodell
+
+M4 nutzt unter anderem:
+
+- `device_sn`
+- `payload_index`
+- `video_index`
+- `video_type`
+- `video_id`
+- `lens_index`
+- `live_source`
+- `zoom_factor`
+- `focal_length_mm`
+- `iso`
+- `shutter_speed`
+- Gimbal Pitch/Roll/Yaw
+
+Multispektral-spezifische Band-, Irradiance- und Kalibrierungsfelder werden
+erst nach den delegierten Fachpaketen #14, #16 und #15 finalisiert. V2.0
+erfindet dafür keine sensorabhängigen Werte.
