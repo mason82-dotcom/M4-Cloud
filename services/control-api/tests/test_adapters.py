@@ -1,9 +1,10 @@
 import asyncio
 
 import httpx
+import pytest
 
-from app.adapters.dji_cloud_api import DJICloudAPIAdapter
-from app.adapters.fh2_openapi import FH2OpenAPIClient
+from app.adapters.dji_cloud_api import DJICloudAPIAdapter, DJICloudAPIError
+from app.adapters.fh2_openapi import FH2Error, FH2OpenAPIClient
 from app.config import Settings
 
 
@@ -122,3 +123,34 @@ def test_fh2_waylines_use_size_parameter() -> None:
     result = asyncio.run(client.list_waylines(page=2, page_size=25))
 
     assert result == {"list": []}
+
+
+def test_dji_redirect_is_not_treated_as_success() -> None:
+    def handler(_: httpx.Request) -> httpx.Response:
+        return httpx.Response(302, headers={"Location": "/login"})
+
+    settings = Settings(
+        dji_cloud_api_base_url="https://cloud.example",
+        dji_cloud_api_access_token="cloud-token",
+    )
+    adapter = DJICloudAPIAdapter(settings, transport=httpx.MockTransport(handler))
+
+    with pytest.raises(DJICloudAPIError):
+        asyncio.run(adapter.camera_paths())
+
+
+def test_fh2_redirect_is_not_treated_as_success() -> None:
+    def handler(_: httpx.Request) -> httpx.Response:
+        return httpx.Response(301, headers={"Location": "/moved"})
+
+    settings = Settings(
+        fh2_enabled=True,
+        fh2_base_url="https://fh2.example",
+        fh2_org_id="org-1",
+        fh2_project_id="project-1",
+        fh2_user_token="fh2-token",
+    )
+    client = FH2OpenAPIClient(settings, transport=httpx.MockTransport(handler))
+
+    with pytest.raises(FH2Error):
+        asyncio.run(client.list_devices())
