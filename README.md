@@ -17,7 +17,7 @@ Die V2.0-Basis ist bewusst kompakt und funktional:
 - **Mosquitto**: authentifiziert, getrennte Rollen für M4 und DJI/RC.
 - **MQTT ACL**: DJI-Basic-Link-Pfade freigegeben, DRC explizit nicht freigegeben.
 - **Lyrebird**: deaktiviert.
-- **Docker Compose**: ohne Architektur-Pinning, dadurch für x86_64 und ARM64/Raspberry Pi geeignet.
+- **Docker Compose**: ohne unnötiges Plattform-Pinning für den vorgesehenen Docker-Host.
 
 ## Architektur
 
@@ -144,17 +144,9 @@ thing/product/+/drc/down
 
 MQTT läuft in V2.0 ohne TLS und ist daher für das vertrauenswürdige Heim-/LAN-Netz vorgesehen. Für WAN-Zugriff muss TLS bzw. ein gesicherter Tunnel vorgeschaltet werden.
 
-## Raspberry Pi / ARM64
+## Zielhost
 
-V2.0 setzt keine feste Container-Plattform. Die verwendeten Basisimages sind
-für den normalen Docker-Compose-Betrieb auf ARM64 geeignet. Auf einem
-Raspberry Pi 5 kann derselbe Startpfad verwendet werden:
-
-```bash
-cp .env.example .env
-docker compose up -d --build
-./scripts/verify.sh
-```
+V2.0 ist für den vorhandenen Docker-/WSL-Host vorgesehen. Es gibt keine Raspberry-Pi-spezifische Konfiguration oder Betriebsanforderung.
 
 ## Projektregeln
 
