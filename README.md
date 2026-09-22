@@ -174,3 +174,9 @@ Die WebUI kann DJI OSD-/State-/Event-/Statusdaten read-only über
 `/ws/v1/telemetry` empfangen. Status: `GET /api/v1/telemetry/status`.
 
 Siehe `docs/TELEMETRY-WEBSOCKET.md`.
+
+
+## DRC
+
+DRC bleibt deaktiviert. Die verifizierte Topic-/Sequenzsemantik und die
+Sicherheits-Gates sind in `docs/DRC-DESIGN.md` dokumentiert.
