@@ -80,7 +80,7 @@ Der interne M4-Benutzer darf:
 
 - `m4/#` lesen/schreiben
 - DJI Status/State/OSD/Requests/Events/Replies lesen
-- DJI `services` und `property/set` schreiben
+- keine DJI-Gerätekommandos publizieren
 - `$SYS/#` für Brokerdiagnose lesen
 
 ### DJI-/RC-Client
@@ -102,21 +102,20 @@ Protokollreferenz.
 
 ## Bootstrap-Descriptor
 
-M4 stellt eine nicht-sensitive Konfigurationsbeschreibung bereit:
+M4 stellt einen geschützten Bootstrap für die spätere Pilot-2-/H5-Anbindung bereit:
 
 ```http
 GET /api/v1/cloud/bootstrap
+X-M4-Bootstrap-Token: <DJI_BOOTSTRAP_TOKEN>
 ```
 
-Ausgegeben werden:
+Ohne konfigurierten Bootstrap-Token antwortet M4 mit HTTP 503. Ein falscher
+oder fehlender Header wird mit HTTP 401 abgewiesen.
 
-- erreichbarer MQTT-Host
-- MQTT-Port
-- DJI-/RC-Benutzername
-- erlaubte Topic-Klassen
-- DRC-Status
-
-Das MQTT-Passwort wird **nicht** in der Antwort ausgegeben.
+Nach erfolgreicher Bootstrap-Authentifizierung werden MQTT-Host, Port,
+DJI-/RC-Benutzername, MQTT-Passwort und erlaubte Topic-Klassen ausgegeben.
+DRC bleibt deaktiviert. Für WAN-Nutzung sind zusätzlich HTTPS und MQTT-TLS
+erforderlich.
 
 ## DRC und Flugsteuerung
 
