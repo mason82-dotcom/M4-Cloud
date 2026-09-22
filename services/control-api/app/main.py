@@ -1,4 +1,6 @@
-from fastapi import FastAPI, HTTPException, Query, Response, status
+import hmac
+
+from fastapi import FastAPI, Header, HTTPException, Query, Response, status
 from starlette.concurrency import run_in_threadpool
 
 from app import __version__
@@ -73,8 +75,21 @@ async def system_status() -> dict[str, object]:
 
 
 @app.get("/api/v1/cloud/bootstrap")
-async def cloud_bootstrap() -> dict[str, object]:
-    return DJICloudAPIAdapter(get_settings()).bootstrap_descriptor()
+async def cloud_bootstrap(
+    x_m4_bootstrap_token: str | None = Header(
+        default=None,
+        alias="X-M4-Bootstrap-Token",
+    ),
+) -> dict[str, object]:
+    settings = get_settings()
+    if not settings.dji_bootstrap_token:
+        raise HTTPException(status_code=503, detail="bootstrap_not_configured")
+    if not x_m4_bootstrap_token or not hmac.compare_digest(
+        x_m4_bootstrap_token,
+        settings.dji_bootstrap_token,
+    ):
+        raise HTTPException(status_code=401, detail="invalid_bootstrap_token")
+    return DJICloudAPIAdapter(settings).bootstrap_descriptor(include_credentials=True)
 
 
 @app.get("/api/v1/cameras/status")
