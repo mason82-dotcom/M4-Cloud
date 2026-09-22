@@ -40,8 +40,6 @@ services:
           echo "topic read thing/product/+/events"
           echo "topic read thing/product/+/services_reply"
           echo "topic read thing/product/+/property/set_reply"
-          echo "topic write thing/product/+/services"
-          echo "topic write thing/product/+/property/set"
           echo
           echo "user $$DJI_MQTT_USERNAME"
           echo "topic write sys/product/+/status"
